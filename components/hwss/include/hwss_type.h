@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "esp_event_base.h"
+
 typedef enum{
     HWSS_IO_SPI =           0x00,
     HWSS_IO_PARALLEL_8 =    0x01,
@@ -53,3 +55,13 @@ typedef uint8_t         hwss_devid_t;
 typedef uint8_t         hwss_sockid_t;
 
 typedef int             hwss_sock_t;
+
+
+typedef enum{
+    HWSS_EVENT_CONNECTED,
+    HWSS_EVENT_DISCONNECTED,
+
+
+}hwss_event_t;
+
+ESP_EVENT_DECLARE_BASE(HWSS_EVENT);

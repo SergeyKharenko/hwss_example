@@ -11,6 +11,11 @@ extern "C" {
 #define _W5500_SPI_READ_			   (0x00 << 2) //< SPI interface Read operation in Control Phase
 #define _W5500_SPI_WRITE_			   (0x01 << 2) //< SPI interface Write operation in Control Phase
 
+#define WIZCHIP_CREG_BLOCK              0x00 	//< Common register block
+#define WIZCHIP_SREG_BLOCK(N)           (1+4*N) //< Socket N register block
+#define WIZCHIP_TXBUF_BLOCK(N)          (2+4*N) //< Socket N Tx buffer address block
+#define WIZCHIP_RXBUF_BLOCK(N)          (3+4*N) //< Socket N Rx buffer address block
+
 //------------------------------- defgroup end --------------------------------------------
 //----------------------------- W5500 Common Registers IOMAP -----------------------------
 /**
