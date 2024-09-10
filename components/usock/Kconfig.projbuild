@@ -1,0 +1,7 @@
+menu "USock Configuration"
+    config USOCK_HWSS_SUPPORT
+        bool "HWSS"
+        default y
+        help
+            Enable HWSS
+endmenu

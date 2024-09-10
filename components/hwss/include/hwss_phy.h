@@ -6,20 +6,38 @@
 typedef struct{
     uint32_t reset_timeout_ms;    /*!< Reset timeout value (Unit: ms) */
     uint32_t autonego_timeout_ms; /*!< Auto-negotiation timeout value (Unit: ms) */
-}hwss_phy_config_t;
+    uint32_t check_period_ms;
+} hwss_phy_config_t;
 
-typedef struct{
+typedef struct hwss_phy_s hwss_phy_t;
+
+struct hwss_phy_s {
     hwss_io_t *io;
     
-    esp_err_t (*reset)(void *phy);
-    esp_err_t (*init)(void *phy);
-    esp_err_t (*deinit)(void *phy);
-    esp_err_t (*autonego_ctrl)(void *phy, hwss_phy_autoneg_cmd_t cmd, bool *autonego_en_stat);
-    esp_err_t (*set_link)(void *phy, hwss_link_t link);
-    esp_err_t (*get_link)(void *phy, hwss_link_t *link);
-    esp_err_t (*set_speed)(void *phy, hwss_speed_t speed);
-    esp_err_t (*get_speed)(void *phy, hwss_speed_t *speed);
-    esp_err_t (*set_duplex)(void *phy, hwss_duplex_t duplex);
-    esp_err_t (*get_duplex)(void *phy, hwss_duplex_t *duplex);
-}hwss_phy_t;
+    esp_err_t (*reset)(hwss_phy_t *phy);
+    esp_err_t (*init)(hwss_phy_t *phy);
+    esp_err_t (*deinit)(hwss_phy_t *phy);
+    esp_err_t (*autonego_ctrl)(hwss_phy_t *phy, hwss_phy_autoneg_cmd_t cmd, bool *autonego_en_stat);
+    esp_err_t (*set_link)(hwss_phy_t *phy, hwss_link_t link);
+    esp_err_t (*get_link)(hwss_phy_t *phy, hwss_link_t *link);
+    esp_err_t (*set_speed)(hwss_phy_t *phy, hwss_speed_t speed);
+    esp_err_t (*get_speed)(hwss_phy_t *phy, hwss_speed_t *speed);
+    esp_err_t (*set_duplex)(hwss_phy_t *phy, hwss_duplex_t duplex);
+    esp_err_t (*get_duplex)(hwss_phy_t *phy, hwss_duplex_t *duplex);
+};
 
+inline esp_err_t hwss_phy_io_read_reg(hwss_phy_t *phy, uint32_t cmd, uint32_t addr, uint8_t *data){
+    return phy->io->read_register(phy->io,cmd,addr,data);
+}
+
+inline esp_err_t hwss_phy_io_write_reg(hwss_phy_t *phy, uint32_t cmd, uint32_t addr, uint8_t *data){
+    return phy->io->write_register(phy->io, cmd, addr, data);
+}
+
+inline esp_err_t hwss_phy_io_read_mem(hwss_phy_t *phy, uint32_t cmd, uint32_t addr, void *data, uint32_t data_len){
+    return phy->io->read_memory(phy->io, cmd,addr,data,data_len);
+}
+
+inline esp_err_t hwss_phy_io_write_mem(hwss_phy_t *phy, uint32_t cmd, uint32_t addr, void *data, uint32_t data_len){
+    return phy->io->write_memory(phy->io, cmd,addr,data,data_len);
+}

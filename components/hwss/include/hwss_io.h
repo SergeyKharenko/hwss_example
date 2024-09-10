@@ -3,24 +3,25 @@
 #include <stdbool.h>
 
 #include "driver/gpio.h"
+#include "driver/spi_common.h"
 #include "driver/spi_master.h"
 #include "driver/uart.h"
 #include "esp_err.h"
 
 #include "hwss_type.h"
 
-typedef struct{
-    void *ctx;
+typedef struct hwss_io_s hwss_io_t;
 
-    void *(*init)(const void* cfg);
-    esp_err_t (*deinit)(void *ctx);
+struct hwss_io_s{
+    esp_err_t (*init)(hwss_io_t *io);
+    esp_err_t (*deinit)(hwss_io_t *io);
 
-    esp_err_t (*read_register)(void *ctx, uint32_t cmd, uint32_t addr, uint8_t *data);
-    esp_err_t (*write_register)(void *ctx, uint32_t cmd, uint32_t addr, uint8_t data);
+    esp_err_t (*read)(hwss_io_t *io, uint32_t cmd, uint32_t addr, uint8_t *data);
+    esp_err_t (*write)(hwss_io_t *io, uint32_t cmd, uint32_t addr, const uint8_t *data);
 
-    esp_err_t (*read_memory)(void *ctx, uint32_t cmd, uint32_t addr, void *data, uint32_t data_len);
-    esp_err_t (*write_memory)(void *ctx, uint32_t cmd, uint32_t addr, void *data, uint32_t data_len);
-}hwss_io_t;
+    esp_err_t (*read_buf)(hwss_io_t *io, uint32_t cmd, uint32_t addr, uint8_t *data, uint32_t data_len);
+    esp_err_t (*write_buf)(hwss_io_t *io, uint32_t cmd, uint32_t addr, const uint8_t *data, uint32_t data_len);
+};
 
 
 typedef struct{
@@ -42,6 +43,7 @@ typedef struct{
 typedef struct{
     gpio_num_t tx_io_num;
     gpio_num_t rx_io_num;
+
     uart_port_t port;
     uart_config_t uart_cfg;
 }hwss_io_uart_config_t;

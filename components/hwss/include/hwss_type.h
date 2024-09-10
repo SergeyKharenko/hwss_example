@@ -38,8 +38,6 @@ typedef enum {
     HWSS_DUPLEX_FULL,
 } hwss_duplex_t;
 
-
-typedef uint8_t         hwss_sock_id_t;
 typedef uint8_t         hwss_sock_port_t;
 
 typedef enum{
@@ -50,3 +48,8 @@ typedef enum{
 } hwss_sock_proto_t;
 
 typedef uint8_t*        hwss_mac_addr_t; 
+
+typedef uint8_t         hwss_devid_t;
+typedef uint8_t         hwss_sockid_t;
+
+typedef int             hwss_sock_t;
