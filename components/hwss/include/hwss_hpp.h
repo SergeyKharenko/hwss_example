@@ -4,7 +4,7 @@
 #include "hwss_type.h"
 
 typedef struct{
-    uint16_t cp_reqest_tick;
+    uint16_t cp_request_time_ms;
     uint8_t cp_magic_num;
 }hwss_hpp_config_t;
 
@@ -16,8 +16,8 @@ struct hwss_hpp_s{
     esp_err_t (*init)(hwss_hpp_t *hpp);
     esp_err_t (*deinit)(hwss_hpp_t *hpp);
 
-    esp_err_t (*set_link_cp_request_time)(hwss_hpp_t *hpp, const uint16_t *s);
-    esp_err_t (*get_link_cp_request_time)(hwss_hpp_t *hpp, uint16_t *s);
+    esp_err_t (*set_link_cp_request_time)(hwss_hpp_t *hpp, const uint16_t *ms);
+    esp_err_t (*get_link_cp_request_time)(hwss_hpp_t *hpp, uint16_t *ms);
 
     esp_err_t (*set_link_cp_magic_num)(hwss_hpp_t *hpp, const uint8_t *num);
     esp_err_t (*get_link_cp_magic_num)(hwss_hpp_t *hpp, uint8_t *num);

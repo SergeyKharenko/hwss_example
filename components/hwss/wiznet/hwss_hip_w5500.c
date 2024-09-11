@@ -1,7 +1,7 @@
 #include <cstddef>
 #include "esp_check.h"
 #include "drv_w5500.h"
-#include "hwss_hip.h"
+#include "hwss_hip_wiznet.h"
 
 static const char *TAG = "w5500.hwss_hip";
 
