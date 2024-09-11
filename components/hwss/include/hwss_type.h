@@ -40,22 +40,21 @@ typedef enum {
     HWSS_DUPLEX_FULL,
 } hwss_duplex_t;
 
-typedef uint8_t         hwss_sock_port_t;
-
 typedef enum{
-    HWSS_SOCK_PROTO_CLOSE = 0x00,
-    HWSS_SOCK_PROTO_TCP =   0x01,
-    HWSS_SOCK_PROTO_UDP =   0x02,
-    HWSS_SOCK_PROTO_MACRAW = 0x03,
-} hwss_sock_proto_t;
+    HWSS_PROTO_CLOSE =     0x00,
+    HWSS_PROTO_TCP =       0x01,
+    HWSS_PROTO_UDP =       0x02,
+    HWSS_PROTO_MACRAW =    0x03,
+} hwss_proto_t;
 
-typedef uint8_t*        hwss_mac_addr_t; 
+#define HWSS_MAC_ADDR_LEN       6
+typedef uint8_t*                hwss_mac_addr_t; 
 
-typedef uint8_t         hwss_devid_t;
-typedef uint8_t         hwss_sockid_t;
+typedef uint8_t                 hwss_devid_t;
+typedef uint8_t                 hwss_sockid_t;
+typedef uint16_t                hwss_port_t;
 
-typedef int             hwss_sock_t;
-
+#define HWSS_SOCKID_SPEC        0
 
 typedef enum{
     HWSS_EVENT_CONNECTED,

@@ -15,7 +15,7 @@ static esp_err_t hwss_mac_w5500_set_addr(hwss_mac_t *mac, const uint8_t *addr){
     hwss_mac_w5500_t *mac_w5500=__containerof(mac,hwss_mac_w5500_t,super);
 
     ESP_GOTO_ON_ERROR(setSHAR(mac->io,addr),err,TAG,"cannot write SHAR");
-    memcpy(mac_w5500->addr,addr,6);
+    memcpy(mac_w5500->addr,addr,HWSS_MAC_ADDR_LEN);
 err:
     return ret;
 }
@@ -51,9 +51,9 @@ hwss_mac_t *hwss_mac_new_w5500(hwss_io_t *io, const hwss_mac_config_t *config){
     ESP_GOTO_ON_FALSE(mac,NULL,err,TAG,"calloc mac failed!");
 
     
-    mac->addr=malloc(6);
+    mac->addr=malloc(HWSS_MAC_ADDR_LEN);
     ESP_GOTO_ON_FALSE(mac->addr,NULL,err,TAG,"malloc mac addr failed!");
-    memcpy(mac->addr,config->addr,6);
+    memcpy(mac->addr,config->addr,HWSS_MAC_ADDR_LEN);
 
     mac->super.io = io;
     mac->super.set_addr=hwss_mac_w5500_set_addr;

@@ -23,7 +23,6 @@ struct hwss_io_s{
     esp_err_t (*write_buf)(hwss_io_t *io, uint32_t cmd, uint32_t addr, const uint8_t *data, uint32_t data_len);
 };
 
-
 typedef struct{
     spi_host_device_t spi_host_id;
     spi_device_interface_config_t spi_devcfg;

@@ -8,7 +8,7 @@ typedef struct{
     uint8_t cp_magic_num;
 }hwss_hpp_config_t;
 
-typedef hwss_hpp_s hwss_hpp_t;
+typedef struct hwss_hpp_s hwss_hpp_t;
 
 struct hwss_hpp_s{
     hwss_io_t *io;

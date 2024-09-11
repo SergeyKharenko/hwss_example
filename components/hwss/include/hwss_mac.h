@@ -7,7 +7,7 @@ typedef struct{
     uint8_t *addr;
 }hwss_mac_config_t;
 
-typedef hwss_mac_s hwss_mac_t;
+typedef struct hwss_mac_s hwss_mac_t;
 
 struct hwss_mac_s{
     hwss_io_t *io;

@@ -11,7 +11,7 @@ typedef struct{
     uint8_t retry_cnt;
 }hwss_hip_w5500_t;
 
-esp_err_t hwss_hip_w5500_init(hwss_hip_t *hip){
+static esp_err_t hwss_hip_w5500_init(hwss_hip_t *hip){
     esp_err_t ret=ESP_OK;
     hwss_hip_w5500_t *hip_w5500=__containerof(hip,hwss_hip_w5500_t,super);
 
@@ -21,53 +21,53 @@ err:
     return ret;
 }
 
-esp_err_t hwss_hip_w5500_deinit(hwss_hip_t *hip){
+static esp_err_t hwss_hip_w5500_deinit(hwss_hip_t *hip){
     return ESP_OK;
 }
 
-esp_err_t hwss_hip_w5500_set_gateway_addr(hwss_hip_t *hip, const uint8_t *addr){
+static esp_err_t hwss_hip_w5500_set_gateway_addr(hwss_hip_t *hip, const uint8_t *addr){
     esp_err_t ret=ESP_OK;
     ESP_GOTO_ON_ERROR(setGAR(hip->io, addr),err,TAG,"cannot write GAR");
 err:
     return ret;
 }
 
-esp_err_t hwss_hip_w5500_get_gateway_addr(hwss_hip_t *hip, uint8_t *addr){
+static esp_err_t hwss_hip_w5500_get_gateway_addr(hwss_hip_t *hip, uint8_t *addr){
     esp_err_t ret=ESP_OK;
     ESP_GOTO_ON_ERROR(getGAR(hip->io, addr),err,TAG,"cannot read GAR");
 err:
     return ret;
 }
 
-esp_err_t hwss_hip_w5500_set_subnet_mask(hwss_hip_t *hip, const uint8_t *mask){
+static esp_err_t hwss_hip_w5500_set_subnet_mask(hwss_hip_t *hip, const uint8_t *mask){
     esp_err_t ret=ESP_OK;
     ESP_GOTO_ON_ERROR(setSUBR(hip->io, mask),err,TAG,"cannot write SUBR");
 err:
     return ret;
 }
 
-esp_err_t hwss_hip_w5500_get_subnet_mask(hwss_hip_t *hip, uint8_t *mask){
+static esp_err_t hwss_hip_w5500_get_subnet_mask(hwss_hip_t *hip, uint8_t *mask){
     esp_err_t ret=ESP_OK;
     ESP_GOTO_ON_ERROR(getSUBR(hip->io, mask),err,TAG,"cannot read SUBR");
 err:
     return ret;
 }
 
-esp_err_t hwss_hip_w5500_set_source_addr(hwss_hip_t *hip, const uint8_t *addr){
+static esp_err_t hwss_hip_w5500_set_source_addr(hwss_hip_t *hip, const uint8_t *addr){
     esp_err_t ret=ESP_OK;
     ESP_GOTO_ON_ERROR(setSIPR(hip->io, addr),err,TAG,"cannot write SIPR");
 err:
     return ret;
 }
 
-esp_err_t hwss_hip_w5500_get_source_addr(hwss_hip_t *hip, uint8_t *addr){
+static esp_err_t hwss_hip_w5500_get_source_addr(hwss_hip_t *hip, uint8_t *addr){
     esp_err_t ret=ESP_OK;
     ESP_GOTO_ON_ERROR(getSIPR(hip->io, addr),err,TAG,"cannot read SIPR");
 err:
     return ret;
 }
 
-esp_err_t hwss_hip_w5500_set_retry_time(hwss_hip_t *hip, const uint16_t *ms){
+static esp_err_t hwss_hip_w5500_set_retry_time(hwss_hip_t *hip, const uint16_t *ms){
     esp_err_t ret=ESP_OK;
     hwss_hip_w5500_t *hip_w5500=__containerof(hip,hwss_hip_w5500_t,super);
     uint16_t tick=*ms*10;
@@ -78,7 +78,7 @@ err:
     return ret;
 }
 
-esp_err_t hwss_hip_w5500_get_retry_time(hwss_hip_t *hip, uint16_t *ms){
+static esp_err_t hwss_hip_w5500_get_retry_time(hwss_hip_t *hip, uint16_t *ms){
     esp_err_t ret=ESP_OK;
     uint16_t tick=0;
 
@@ -88,7 +88,7 @@ err:
     return ret;
 }
 
-esp_err_t hwss_hip_w5500_set_retry_cnt(hwss_hip_t *hip, const uint8_t *cnt){
+static esp_err_t hwss_hip_w5500_set_retry_cnt(hwss_hip_t *hip, const uint8_t *cnt){
     esp_err_t ret=ESP_OK;
     hwss_hip_w5500_t *hip_w5500=__containerof(hip,hwss_hip_w5500_t,super);
 
@@ -98,7 +98,7 @@ err:
     return ret;
 }
 
-esp_err_t hwss_hip_w5500_get_retry_cnt(hwss_hip_t *hip, uint8_t *cnt){
+static esp_err_t hwss_hip_w5500_get_retry_cnt(hwss_hip_t *hip, uint8_t *cnt){
     esp_err_t ret=ESP_OK;
 
     ESP_GOTO_ON_ERROR(getRCR(hip->io, cnt),err,TAG,"cannot read RCR");
@@ -106,7 +106,7 @@ err:
     return ret;
 }
 
-esp_err_t hwss_hip_w5500_get_unreachable_addr(hwss_hip_t *hip, uint8_t *addr){
+static esp_err_t hwss_hip_w5500_get_unreachable_addr(hwss_hip_t *hip, uint8_t *addr){
     esp_err_t ret=ESP_OK;
 
     ESP_GOTO_ON_ERROR(getUIPR(hip->io, addr),err,TAG,"cannot read UIPR");
@@ -114,7 +114,7 @@ err:
     return ret;
 }
 
-esp_err_t hwss_hip_w5500_get_unreachable_port(hwss_hip_t *hip, uint16_t *port){
+static esp_err_t hwss_hip_w5500_get_unreachable_port(hwss_hip_t *hip, uint16_t *port){
     esp_err_t ret=ESP_OK;
 
     ESP_GOTO_ON_ERROR(getUPORTR(hip->io, port),err,TAG,"cannot read UPORTR");

@@ -8,7 +8,7 @@ typedef struct{
     uint8_t retry_cnt;
 }hwss_hip_config_t;
 
-typedef hwss_hip_s hwss_hip_t;
+typedef struct hwss_hip_s hwss_hip_t;
 
 struct hwss_hip_s{
     hwss_io_t *io;

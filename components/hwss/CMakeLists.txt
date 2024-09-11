@@ -1,3 +1,3 @@
 idf_component_register(SRCS "hwss.c" "hwss_type.c"
                     INCLUDE_DIRS "include" "wiznet"
-                    REQUIRES driver lwip freertos)
+                    REQUIRES driver lwip freertos esp_event)
