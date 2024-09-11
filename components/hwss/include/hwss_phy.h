@@ -5,7 +5,6 @@
 
 typedef struct{
     uint32_t reset_timeout_ms;    /*!< Reset timeout value (Unit: ms) */
-    uint32_t autonego_timeout_ms; /*!< Auto-negotiation timeout value (Unit: ms) */
     uint32_t check_period_ms;
 } hwss_phy_config_t;
 
