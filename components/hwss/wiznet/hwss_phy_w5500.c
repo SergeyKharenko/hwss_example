@@ -322,7 +322,8 @@ hwss_phy_t *hwss_phy_new_w5500(const hwss_io_t *io, const hwss_phy_config_t *phy
     phy=calloc(1,sizeof(hwss_phy_w5500_t));
     ESP_GOTO_ON_FALSE(phy,NULL,err,TAG,"calloc phy failed!");
 
-    ESP_GOTO_ON_FALSE(phy_config->reset_timeout_ms>0 && phy_config->check_period_ms >0);
+    ESP_GOTO_ON_FALSE(phy_config->reset_timeout_ms>0 && phy_config->check_period_ms >0,
+                        NULL,err,TAG,"invalid config args");
     if(phy_config->check_period_ms<5)
         ESP_LOGW(TAG,"check period too short might SERIOUSLY affects the execution of other tasks!");
     
@@ -330,7 +331,7 @@ hwss_phy_t *hwss_phy_new_w5500(const hwss_io_t *io, const hwss_phy_config_t *phy
     phy->super.reset=hwss_phy_w5500_reset;
     phy->super.init=hwss_phy_w5500_init;
     phy->super.deinit=hwss_phy_w5500_deinit;
-    phy->super.autonego_ctrl=hwss_phy_autoneg_cmd_t;
+    phy->super.autonego_ctrl=hwss_phy_w5500_autonego_ctrl;
     phy->super.set_link=hwss_phy_w5500_set_link;
     phy->super.get_link=hwss_phy_w5500_get_link;
     phy->super.set_speed=hwss_phy_w5500_set_speed;
