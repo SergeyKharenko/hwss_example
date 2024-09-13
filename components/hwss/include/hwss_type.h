@@ -45,6 +45,7 @@ typedef enum{
     HWSS_PROTO_TCP =       0x01,
     HWSS_PROTO_UDP =       0x02,
     HWSS_PROTO_MACRAW =    0x03,
+    
 } hwss_proto_t;
 
 #define HWSS_MAC_ADDR_LEN       6

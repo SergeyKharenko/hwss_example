@@ -32,28 +32,28 @@ static void hwss_hnet_w5500_check_state_timer_cb(void *args){
 
     if(ir&IR_CONFLICT){        
         if(hwss_event_post(HWSS_INTER_NET_EVENT,HWSS_INTER_NET_EVENT_IP_CONFLICT,(void *)*hnet_w5500->super,
-                        sizeof(hwss_hnet_t),0)!=ESP_OK){
+                        sizeof(hwss_hnet_t *),0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
         }
     }
 
     if(ir&IR_UNREACH){        
         if(hwss_event_post(HWSS_INTER_NET_EVENT,HWSS_INTER_NET_EVENT_DEST_UNREACH,(void *)*hnet_w5500->super,
-                        sizeof(hwss_hnet_t),0)!=ESP_OK){
+                        sizeof(hwss_hnet_t *),0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
         }
     }
 
     if(ir&IR_PPPoE){        
         if(hwss_event_post(HWSS_INTER_NET_EVENT,HWSS_INTER_NET_EVENT_PPPOE_CLOSE,(void *)*hnet_w5500->super,
-                        sizeof(hwss_hnet_t),0)!=ESP_OK){
+                        sizeof(hwss_hnet_t *),0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
         }
     }
 
     if(ir&IR_MP){        
         if(hwss_event_post(HWSS_INTER_NET_EVENT,HWSS_INTER_NET_EVENT_MAGIC_PACK,(void *)*hnet_w5500->super,
-                        sizeof(hwss_hnet_t),0)!=ESP_OK){
+                        sizeof(hwss_hnet_t *),0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
         }
     }
