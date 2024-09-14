@@ -29,6 +29,3 @@ struct hwss_driver_s{
     
 };
 
-esp_err_t hwss_event_loop_create(void);
-esp_err_t hwss_event_loop_delete(void);
-

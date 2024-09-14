@@ -64,6 +64,9 @@ struct hwss_hso_s{
     esp_err_t (*set_sock_dest_mac_addr)(hwss_hso_t *hso, hwss_sockid_t id, const hwss_mac_addr_t addr);
     esp_err_t (*get_sock_dest_mac_addr)(hwss_hso_t *hso, hwss_sockid_t id, hwss_mac_addr_t addr);
 
+    esp_err_t (*set_sock_dest_addr)(hwss_hso_t *hso, hwss_sockid_t id, const uint8_t *addr);
+    esp_err_t (*get_sock_dest_addr)(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *addr);
+
     esp_err_t (*set_sock_keepalive_tick)(hwss_hso_t *hso, hwss_sockid_t id, const uint8_t *tick);
     esp_err_t (*get_sock_keepalive_tick)(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *tick);
 

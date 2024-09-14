@@ -15,7 +15,7 @@ typedef enum{
 
 #define HWSS_IO_TYPE_LIST(name)                      const hwss_io_type name[]
 
-bool hwss_io_type_supported(hwss_io_type *list, hwss_io_type type);
+bool hwss_io_type_supported(const hwss_io_type list[], hwss_io_type type);
 
 typedef enum {
     HWSS_PHY_AUTONEGO_RESTART,
@@ -46,6 +46,7 @@ typedef enum{
     HWSS_PROTO_UDP =       0x02,
     HWSS_PROTO_MACRAW =    0x03,
     
+    HWSS_PROTO_UNKNOW =    0xFF
 } hwss_proto_t;
 
 #define HWSS_MAC_ADDR_LEN       6
@@ -57,11 +58,4 @@ typedef uint16_t                hwss_port_t;
 
 #define HWSS_SOCKID_SPEC        0
 
-typedef enum{
-    HWSS_EVENT_CONNECTED,
-    HWSS_EVENT_DISCONNECTED,
 
-
-}hwss_event_t;
-
-ESP_EVENT_DECLARE_BASE(HWSS_EVENT);

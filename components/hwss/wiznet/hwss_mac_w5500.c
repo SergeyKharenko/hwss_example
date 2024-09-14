@@ -1,4 +1,4 @@
-#include <cstddef>
+#include <sys/cdefs.h>
 #include "esp_check.h"
 #include "drv_w5500.h"
 #include "hwss_mac_wiznet.h"

@@ -1,4 +1,4 @@
-#include <cstddef>
+#include <sys/cdefs.h>
 #include "esp_check.h"
 #include "esp_timer.h"
 #include "drv_w5500.h"
@@ -320,7 +320,7 @@ hwss_hnet_t *hwss_hnet_new_w5500(hwss_io_t *io, hwss_hnet_config_t *config){
         .arg=hnet,
         .skip_unhandled_events=true
     };
-    ESP_GOTO_ON_ERROR(esp_timer_create(&timer_arg,&hnet->check_state_timer),err,TAG,"create check state timer failed");
+    ESP_GOTO_ON_FALSE(esp_timer_create(&timer_arg,&hnet->check_state_timer)==ESP_OK,NULL,err,TAG,"create check state timer failed");
 
     return &hnet->super;
 err:

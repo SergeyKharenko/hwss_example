@@ -24,6 +24,7 @@ typedef struct{
     uint32_t    irq_handler_task_prio;
 }hwss_hso_scm_config_t;
 
+typedef struct hwss_hso_scm_timer_arg_s hwss_hso_scm_timer_arg_t;
 typedef struct hwss_hso_scm_s hwss_hso_scm_t;
 
 struct hwss_hso_scm_s{
@@ -45,6 +46,8 @@ struct hwss_hso_scm_s{
     esp_timer_handle_t      *socktimer_list;
     esp_timer_handle_t      sock_polling_timer;
 
+    hwss_hso_scm_timer_arg_t *socktimer_args;
+
     TaskHandle_t            irq_handler;
 
     esp_err_t (*init)(hwss_hso_scm_t *hso_scm);
@@ -61,6 +64,11 @@ struct hwss_hso_scm_s{
         esp_err_t (*set_sock_intr_enable)(hwss_hso_scm_t *hso_scm, hwss_sockid_t id, bool en);
         esp_err_t (*clear_sock_intr)(hwss_hso_scm_t *hso_scm, hwss_sockid_t id);
     }drv;
+};
+
+struct hwss_hso_scm_timer_arg_s{
+    hwss_hso_scm_t  *hso_scm;
+    hwss_sockid_t   id;
 };
 
 hwss_hso_scm_t *hwss_hso_scm_new(hwss_hso_t *hso, const hwss_hso_scm_config_t *config);

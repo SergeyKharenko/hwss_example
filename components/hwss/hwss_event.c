@@ -1,8 +1,13 @@
 #include "esp_task.h"
 #include "hwss.h"
+#include "hwss_type.h"
 #include "hwss_event.h"
 
 static esp_event_loop_handle_t s_hwss_event_loop=NULL;
+
+ESP_EVENT_DEFINE_BASE(HWSS_EVENT);
+ESP_EVENT_DEFINE_BASE(HWSS_INTER_NET_EVENT);
+ESP_EVENT_DEFINE_BASE(HWSS_INTER_SOCK_EVENT);
 
 esp_err_t hwss_event_loop_create(void){
     if(s_hwss_event_loop)

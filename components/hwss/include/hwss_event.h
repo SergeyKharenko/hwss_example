@@ -17,8 +17,19 @@ typedef enum{
     HWSS_INTER_SOCK_EVENT_CONNECT
 }hwss_inter_sock_event;
 
-ESP_EVENT_DEFINE_BASE(HWSS_INTER_NET_EVENT);
-ESP_EVENT_DEFINE_BASE(HWSS_INTER_SOCK_EVENT);
+typedef enum{
+    HWSS_EVENT_CONNECTED,
+    HWSS_EVENT_DISCONNECTED,
+    
+}hwss_event_t;
+
+ESP_EVENT_DECLARE_BASE(HWSS_EVENT);
+
+ESP_EVENT_DECLARE_BASE(HWSS_INTER_NET_EVENT);
+ESP_EVENT_DECLARE_BASE(HWSS_INTER_SOCK_EVENT);
+
+esp_err_t hwss_event_loop_create(void);
+esp_err_t hwss_event_loop_delete(void);
 
 esp_err_t hwss_event_handler_register(esp_event_base_t event_base, int32_t event_id,
                                      esp_event_handler_t event_handler, void* event_handler_arg);

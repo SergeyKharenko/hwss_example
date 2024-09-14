@@ -6,11 +6,6 @@
 
 static const char *TAG = "hwss_hso_scm";
 
-typedef struct{
-    hwss_hso_scm_t  *hso_scm;
-    hwss_sockid_t   id;
-}hwss_hso_scm_timer_arg_t;
-
 static esp_err_t hwss_hso_scm_sock_intr_handler(hwss_hso_scm_t *hso_scm, hwss_sockid_t id, uint8_t sintr){
     esp_err_t ret=ESP_OK;
     hwss_hso_event_arg_t hso_event_arg={
@@ -104,27 +99,27 @@ static void hwss_hso_scm_sock_polling_timer_cb(void *args){
 
     if(hso_scm->drv.get_sock_global_intr(hso_scm,&gintr)!=ESP_OK){
         ESP_LOGE(TAG,"cannot get socket global interrupt");
-        continue;
+        return;
     }
 
     for(hwss_sockid_t id=0;id<hso_scm->en_sock_num;id++){
         if(gintr&0x01&&hso_scm->sockact_sta_list[id]==HWSS_HSO_SOCKACT_ACTIVE){
             if(hso_scm->drv.get_sock_intr(hso_scm,id,&sintr)!=ESP_OK){
                 ESP_LOGE(TAG,"cannot get socket%u interrupt",id);
-                continue;
+                return;
             }
 
             if(hwss_hso_scm_sock_intr_handler(hso_scm,id,sintr)!=ESP_OK)
-                continue;
+                return;
 
             if(hso_scm->drv.clear_sock_intr(hso_scm,id)!=ESP_OK){
                 ESP_LOGE(TAG,"fail to clear sock%u interrupt",id);
-                continue;
+                return;
             }
 
             if(esp_timer_restart(hso_scm->socktimer_list[id],hso_scm->sock_active_threshold_ms*1000)!=ESP_OK){
                 ESP_LOGE(TAG,"fail to restart sock%u timer",id);
-                continue;
+                return;
             }
         }
         gintr>>=1;
@@ -173,8 +168,8 @@ esp_err_t hwss_hso_scm_init(hwss_hso_scm_t *hso_scm){
         };
 
         ESP_GOTO_ON_ERROR(gpio_config(&io_cfg),err,TAG,"cannot setup irq pin");
-        ESP_GOTO_ON_ERROR(gpio_intr_enable(hso_w5500->irq_gpio_num),err,TAG,"cannot enable irq");
-        ESP_GOTO_ON_ERROR(gpio_isr_handler_add(hso_scm->irq_gpio_num,hwss_hso_w5500_isr_handler,(void *)hso_scm),
+        ESP_GOTO_ON_ERROR(gpio_intr_enable(hso_scm->irq_gpio_num),err,TAG,"cannot enable irq");
+        ESP_GOTO_ON_ERROR(gpio_isr_handler_add(hso_scm->irq_gpio_num,hwss_hso_scm_isr_handler,(void *)hso_scm),
                         err,TAG,"cannot enable irq");
         ESP_GOTO_ON_ERROR(hso_scm->drv.set_sock_global_intr_enable_all(hso_scm,true),err,TAG,"fail to enable global socket intr");
     }
@@ -259,7 +254,7 @@ hwss_hso_scm_t *hwss_hso_scm_new(hwss_hso_t *hso, const hwss_hso_scm_config_t *c
     hwss_hso_scm_t *ret=NULL;
 
     ret=calloc(1,sizeof(hwss_hso_scm_t));
-    ESP_GOTO_ON_FALSE(hso_scm,NULL,err,TAG,"fail to calloc hso_scm");
+    ESP_GOTO_ON_FALSE(ret,NULL,err,TAG,"fail to calloc hso_scm");
 
     ret->hso=hso;
 
@@ -275,11 +270,35 @@ hwss_hso_scm_t *hwss_hso_scm_new(hwss_hso_t *hso, const hwss_hso_scm_config_t *c
 
     if(ret->irq_gpio_num>=0){
         ret->socktimer_list=calloc(config->sock_total_num,sizeof(esp_timer_handle_t));
-        ESP_GOTO_ON_FALSE(ret->socktimer_list,ESP_FAIL,err,TAG,"fail to calloc socktimer_list");
+        ESP_GOTO_ON_FALSE(ret->socktimer_list,NULL,err,TAG,"fail to calloc socktimer_list");
+
+        ret->socktimer_args=calloc(config->sock_total_num,sizeof(hwss_hso_scm_timer_arg_t));
+        ESP_GOTO_ON_FALSE(ret->socktimer_args,NULL,err,TAG,"fail to calloc socktimer_args");
 
         ret->irq_task_prio=config->irq_handler_task_prio;
         ret->irq_task_stack_size=config->irq_handler_task_stack_size;
+
+        esp_timer_create_args_t timer_arg={
+            .name="hwss_hso_scm_sockact_timer",
+            .callback=hwss_hso_scm_sockact_timer_cb,
+            .skip_unhandled_events=true
+        };
+
+        for(hwss_devid_t id=0;id<config->sock_total_num;id++){
+            ret->socktimer_args[id].hso_scm=ret;
+            ret->socktimer_args[id].id=id;
+            timer_arg.arg=ret->socktimer_args+id;
+            ESP_GOTO_ON_FALSE(esp_timer_create(&timer_arg,ret->socktimer_list+id)==ESP_OK,NULL,err,TAG,"cannot create sock%u act timer",id);
+        }
     }
+
+    esp_timer_create_args_t timer_arg={
+        .arg=ret,
+        .name="hwss_hso_scm_polling_timer",
+        .callback=hwss_hso_scm_sock_polling_timer_cb,
+        .skip_unhandled_events=true
+    };
+    ESP_GOTO_ON_FALSE(esp_timer_create(&timer_arg,&ret->sock_polling_timer)==ESP_OK,NULL,err,TAG,"cannot create polling timer");
 
 err:
     return ret;

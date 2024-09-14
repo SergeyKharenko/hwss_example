@@ -1,4 +1,4 @@
-#include <cstddef>
+#include <sys/cdefs.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_check.h"
@@ -42,6 +42,7 @@ typedef struct{
     uint16_t            irq_inter_tick;
 
     hwss_hso_socksta_t  sock_state[W5500_SOCK_TOTAL_NUM];
+    uint8_t             sock_state_raw[W5500_SOCK_TOTAL_NUM];
     esp_timer_handle_t  sock_check_state_timer;
 }hwss_hso_w5500_t;
 
@@ -163,6 +164,7 @@ static void hwss_hso_w5500_check_state_timer_cb(void *args){
             case SOCK_MACRAW: hso_w5500->sock_state[id]=HWSS_HSO_SOCK_OPENED;break;
             default hso_w5500->sock_state[id]=HWSS_HSO_SOCK_CUSTOM_STATE;break;
         }
+        hso_w5500->sock_state_raw[id]=snsr;
     }
 }
 
@@ -171,13 +173,12 @@ static void hwss_hso_w5500_check_state_timer_cb(void *args){
 static esp_err_t hwss_hso_w5500_init(hwss_hso_t *hso){
     esp_err_t ret=ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
+    hwss_hso_scm_t *hso_scm=hso->scm;
 
     ESP_GOTO_ON_ERROR(setINTLEVEL(hso->io,&(hso_w5500->irq_inter_tick)),err,TAG,"cannot write INTLEVEL");
 
-    uint8_t snir_clr=Sn_IR_CON|Sn_IR_DISCON|Sn_IR_RECV|Sn_IR_SENDOK|Sn_IR_TIMEOUT;
     for(hwss_sockid_t id=0;id<W5500_SOCK_TOTAL_NUM;id++){
         ESP_GOTO_ON_ERROR(setSn_MR(hso->io,id,&w5500_sock_mode_default),err,TAG,"cannot write Sn_MR");
-        ESP_GOTO_ON_ERROR(setSn_IR(hso->io,id,&snir_clr),err,TAG,"cannot write Sn_IR");
         ESP_GOTO_ON_ERROR(setSn_PORT(hso->io,id,&w5500_sock_port_defualt),err,TAG,"cannot write Sn_PORT");
         ESP_GOTO_ON_ERROR(setSn_DHAR(hso->io,id,w5500_sock_dest_mac_addr_default),err,TAG,"cannot write Sn_DHAR");
         ESP_GOTO_ON_ERROR(setSn_DIPR(hso->io,id,w5500_sock_dest_addr_default),err,TAG,"cannot write Sn_DIPR");
@@ -185,18 +186,14 @@ static esp_err_t hwss_hso_w5500_init(hwss_hso_t *hso){
         ESP_GOTO_ON_ERROR(setSn_MSSR(hso->io,id,&w5500_sock_mss_default),err,TAG,"cannot write Sn_MSSR");
         ESP_GOTO_ON_ERROR(setSn_RXBUF_SIZE(hso->io,id,&(hso_w5500->rxbuf_size_kb[id])),err,TAG,"cannot write Sn_RXBUF_SIZE");
         ESP_GOTO_ON_ERROR(setSn_TXBUF_SIZE(hso->io,id,&(hso_w5500->txbuf_size_kb[id])),err,TAG,"cannot write Sn_TXBUF_SIZE");
-        ESP_GOTO_ON_ERROR(setSn_IMR(hso->io,id,&w5500_sock_irq_mask_default),err,TAG,"cannot write Sn_IMR");
         ESP_GOTO_ON_ERROR(setSn_FRAG(hso->io,id,&w5500_sock_frag_default),err,TAG,"cannot write Sn_FRAG");
         ESP_GOTO_ON_ERROR(setSn_KPALVTR(hso->io,id,&w5500_sock_keepalive_tick_default),err,TAG,"cannot write Sn_KPALVTR");
     }
 
-    hso_w5500->sock0_sta=HWSS_HSO_SOCK_IDLE;
     ESP_GOTO_ON_ERROR(esp_timer_start_periodic(hso_w5500->sock_check_state_timer,hso_w5500->check_state_period_ms*1000),
                         err,TAG,"fail to start sock timer");
-    ESP_GOTO_ON_ERROR(esp_timer_start_periodic(hso_w5500->sock0_check_state_timer,hso_w5500->sock0_check_state_slow_period_ms*1000),
-                        err,TAG,"fail to start sock0 timer");
 
-
+    ESP_GOTO_ON_ERROR(hso_scm->init(hso_scm),err,TAG,"fail to init hso_scm");
 
 err:
     return ret;
@@ -205,11 +202,10 @@ err:
 static esp_err_t hwss_hso_w5500_deinit(hwss_hso_t *hso){
     esp_err_t ret=ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
+    hwss_hso_scm_t *hso_scm=hso->scm;
 
-
-
+    ESP_GOTO_ON_ERROR(hso_scm->deinit(hso_scm),err,TAG,"fail to stop hso_scm");
     ESP_GOTO_ON_ERROR(esp_timer_stop(hso_w5500->sock_check_state_timer),err,TAG,"fail to stop sock timer");
-    ESP_GOTO_ON_ERROR(esp_timer_stop(hso_w5500->sock0_check_state_timer),err,TAG,"fail to stop sock0 timer");
 
 err:
     return ret;
@@ -223,11 +219,11 @@ static esp_err_t hwss_hso_w5500_set_sock_proto(hwss_hso_t *hso, hwss_sockid_t id
     
     switch (*proto)
     {
-    case HWSS_PROTO_CLOSE: snmr.protocol=Sn_MR_CLOSE; break;
-    case HWSS_PROTO_MACRAW: snmr.protocol=Sn_MR_MACRAW; break;
-    case HWSS_PROTO_TCP: snmr.protocol=Sn_MR_TCP; break;
-    case HWSS_PROTO_UDP: snmr.protocol=Sn_MR_UDP; break;
-    default: return ESP_ERR_NOT_SUPPORTED;
+        case HWSS_PROTO_CLOSE: snmr.protocol=Sn_MR_CLOSE; break;
+        case HWSS_PROTO_MACRAW: snmr.protocol=Sn_MR_MACRAW; break;
+        case HWSS_PROTO_TCP: snmr.protocol=Sn_MR_TCP; break;
+        case HWSS_PROTO_UDP: snmr.protocol=Sn_MR_UDP; break;
+        default: return ESP_ERR_NOT_SUPPORTED;
     }
 
     ESP_GOTO_ON_ERROR(setSn_MR(hso->io,id,&(snmr.val)),err,TAG,"cannot write Sn_MR");
@@ -236,39 +232,189 @@ err:
 }
 
 static esp_err_t hwss_hso_w5500_get_sock_proto(hwss_hso_t *hso, hwss_sockid_t id, hwss_proto_t *proto){
+    esp_err_t ret=ESP_OK;
+    
+    sn_mr_reg_t snmr;
+    ESP_GOTO_ON_ERROR(getSn_MR(hso->io,id,&(snmr.val)),err,TAG,"cannot read Sn_MR");
 
+    switch (snmr.protocol)
+    {
+        case Sn_MR_CLOSE: *proto=HWSS_PROTO_CLOSE; break;
+        case Sn_MR_MACRAW: *proto=HWSS_PROTO_MACRAW; break;
+        case Sn_MR_TCP: *proto=HWSS_PROTO_TCP; break;
+        case Sn_MR_UDP: *proto=HWSS_PROTO_UDP; break;
+        default: *proto=HWSS_PROTO_UNKNOW; break;
+    }
+
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hso_w5500_set_sockmode_opt(hwss_hso_t *hso, hwss_sockid_t id, const uint8_t *opt){
+    esp_err_t ret= ESP_OK;
+
+    sn_mr_reg_t snmr;
+    ESP_GOTO_ON_ERROR(getSn_MR(hso->io,id,&(snmr.val)),err,TAG,"cannot read Sn_MR");
+
+    hwss_hso_wiznet_sockmode_opt_t wiznet_opt;
+    wiznet_opt.val=*opt;
+
+    if(wiznet_opt.multicast)
+        snmr.multi_mfen=0x01;
+    else
+        snmr.multi_mfen=0x00;
+
+    if(wiznet_opt.broadcast_block)
+        snmr.bcastb=0x01;
+    else
+        snmr.bcastb=0x00;
+
+    if(wiznet_opt.nodelay_ack)
+        snmr.nd_mc_mmb=0x01;
+    else
+        snmr.nd_mc_mmb=0x00;
+
+    if(wiznet_opt.unicast_block)
+        snmr.unicastb_mip6b=0x01;
+    else
+        snmr.unicastb_mip6b=0x00;
+
+    ESP_GOTO_ON_ERROR(setSn_MR(hso->io,id,&(snmr.val)),err,TAG,"cannot write Sn_MR");
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hso_w5500_get_sockmode_opt(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *opt){
+    esp_err_t ret= ESP_OK;
+
+    sn_mr_reg_t snmr;
+    ESP_GOTO_ON_ERROR(getSn_MR(hso->io,id,&(snmr.val)),err,TAG,"cannot read Sn_MR");
+
+    hwss_hso_wiznet_sockmode_opt_t wiznet_opt;
+    wiznet_opt.val=0;
+
+    if(snmr.multi_mfen)
+        wiznet_opt.multicast=0x01;
+    if(snmr.bcastb)
+        wiznet_opt.broadcast_block=0x01;
+    if(snmr.nd_mc_mmb)
+        wiznet_opt.nodelay_ack=0x01;
+    if(snmr.unicastb_mip6b)
+        wiznet_opt.unicast_block=0x01;
+
+    *opt=wiznet_opt.val;
+err:
+    return ret;    
 }
 
 static esp_err_t hwss_hso_w5500_set_sock_source_port(hwss_hso_t *hso, hwss_sockid_t id, const hwss_port_t *port){
+    esp_err_t ret= ESP_OK;
 
+    ESP_GOTO_ON_ERROR(setSn_PORT(hso->io,id,port),err,TAG,"cannot write Sn_PORT");
+err:
+    return ret;
 }
 
 static esp_err_t hwss_hso_w5500_get_sock_source_port(hwss_hso_t *hso, hwss_sockid_t id, hwss_port_t *port){
+    esp_err_t ret= ESP_OK;
 
+    ESP_GOTO_ON_ERROR(getSn_PORT(hso->io,id,port),err,TAG,"cannot read Sn_PORT");
+err:
+    return ret;
 }
 
 static esp_err_t hwss_hso_w5500_set_sock_dest_port(hwss_hso_t *hso, hwss_sockid_t id, const hwss_port_t *port){
+    esp_err_t ret= ESP_OK;
 
+    ESP_GOTO_ON_ERROR(setSn_DPORT(hso->io,id,port),err,TAG,"cannot write Sn_DPORT");
+err:
+    return ret;
 }
 
 static esp_err_t hwss_hso_w5500_get_sock_dest_port(hwss_hso_t *hso, hwss_sockid_t id, hwss_port_t *port){
+    esp_err_t ret= ESP_OK;
 
+    ESP_GOTO_ON_ERROR(getSn_DPORT(hso->io,id,port),err,TAG,"cannot read Sn_DPORT");
+err:
+    return ret;
 }
 
 static esp_err_t hwss_hso_w5500_set_sock_dest_mac_addr(hwss_hso_t *hso, hwss_sockid_t id, const hwss_mac_addr_t addr){
+    esp_err_t ret= ESP_OK;
 
+    ESP_GOTO_ON_ERROR(setSn_DHAR(hso->io,id,addr),err,TAG,"cannot write Sn_DHAR");
+err:
+    return ret;
 }
 
 static esp_err_t hwss_hso_w5500_get_sock_dest_mac_addr(hwss_hso_t *hso, hwss_sockid_t id, hwss_mac_addr_t addr){
+    esp_err_t ret= ESP_OK;
 
+    ESP_GOTO_ON_ERROR(getSn_DHAR(hso->io,id,addr),err,TAG,"cannot read Sn_DHAR");
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hso_w5500_set_sock_dest_addr(hwss_hso_t *hso, hwss_sockid_t id, const uint8_t *addr){
+    esp_err_t ret= ESP_OK;
+
+    ESP_GOTO_ON_ERROR(setSn_DIPR(hso->io,id,addr),err,TAG,"cannot write Sn_DIPR");
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hso_w5500_get_sock_dest_addr(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *addr){
+    esp_err_t ret= ESP_OK;
+
+    ESP_GOTO_ON_ERROR(getSn_DIPR(hso->io,id,addr),err,TAG,"cannot read Sn_DIPR");
+err:
+    return ret;
 }
 
 static esp_err_t hwss_hso_w5500_set_sock_keepalive_tick(hwss_hso_t *hso, hwss_sockid_t id, const uint8_t *tick){
+    esp_err_t ret= ESP_OK;
 
+    ESP_GOTO_ON_ERROR(setSn_KPALVTR(hso->io,id,tick),err,TAG,"cannot write Sn_KPALVTR");
+err:
+    return ret;
 }
 
 static esp_err_t hwss_hso_w5500_get_sock_keepalive_tick(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *tick){
+    esp_err_t ret= ESP_OK;
 
+    ESP_GOTO_ON_ERROR(getSn_KPALVTR(hso->io,id,tick),err,TAG,"cannot read Sn_KPALVTR");
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hso_w5500_set_sockact_state(hwss_hso_t *hso, hwss_sockid_t id, const hwss_hso_sockact_sta_t *sta){
+    esp_err_t ret= ESP_OK;
+    hwss_hso_scm_t *hso_scm=hso->scm;
+    ESP_GOTO_ON_ERROR(hso_scm->set_sock_state(hso_scm,id,sta),err,TAG,"cannot set sock%u state",id);
+err:
+    return ret;    
+}
+
+static esp_err_t hwss_hso_w5500_get_sockact_state(hwss_hso_t *hso, hwss_sockid_t id, hwss_hso_sockact_sta_t *sta){
+    esp_err_t ret= ESP_OK;
+    hwss_hso_scm_t *hso_scm=hso->scm;
+    ESP_GOTO_ON_ERROR(hso_scm->get_sock_state(hso_scm,id,sta),err,TAG,"cannot get sock%u state",id);
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hso_w5500_get_sock_state(hwss_hso_t *hso, hwss_sockid_t id, hwss_hso_socksta_t *sta){
+    hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
+
+    *sta=hso_w5500->sock_state[id];
+    return ESP_OK;
+}
+
+static esp_err_t hwss_hso_w5500_get_sock_state_raw(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *sta){
+    hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
+
+    *sta=hso_w5500->sock_state_raw[id];
+    return ESP_OK;
 }
 
 hwss_hso_t *hwss_hso_new_w5500(hwss_io_t *io, const hwss_hso_config_t *config){
@@ -331,7 +477,7 @@ hwss_hso_t *hwss_hso_new_w5500(hwss_io_t *io, const hwss_hso_config_t *config){
         .callback=hwss_hso_w5500_check_state_timer_cb,
         .skip_unhandled_events=true
     };
-    ESP_GOTO_ON_ERROR(esp_timer_create(&timer_arg,&hso->sock_check_state_timer),err,TAG,"create sock check state timer failed");
+    ESP_GOTO_ON_FALSE(esp_timer_create(&timer_arg,&hso->sock_check_state_timer)==ESP_OK,NULL,err,TAG,"create sock check state timer failed");
 
     hwss_hso_scm_config_t scm_config={
         .en_sock_num=config->en_sock_num,
@@ -357,5 +503,10 @@ hwss_hso_t *hwss_hso_new_w5500(hwss_io_t *io, const hwss_hso_config_t *config){
     return &hso->super;
 
 err:
+    if(hso){
+        if(hso->super.scm)
+            free(hso->super.scm);
+        free(hso);
+    }
     return ret;
 }
