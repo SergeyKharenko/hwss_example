@@ -322,7 +322,7 @@ hwss_hnet_t *hwss_hnet_new_w5500(hwss_io_t *io, hwss_hnet_config_t *config){
     };
     ESP_GOTO_ON_ERROR(esp_timer_create(&timer_arg,&hnet->check_state_timer),err,TAG,"create check state timer failed");
 
-    return hnet->super;
+    return &hnet->super;
 err:
     if(hnet)
         free(hnet);

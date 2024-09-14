@@ -2,15 +2,6 @@
 #include "hwss.h"
 #include "hwss_event.h"
 
-esp_event_base_t HWSS_EVENT_BASE_SOCKET_LIST[]={HWSS_INTER_SOCK0_EVENT,
-                                                HWSS_INTER_SOCK1_EVENT,
-                                                HWSS_INTER_SOCK2_EVENT,
-                                                HWSS_INTER_SOCK3_EVENT,
-                                                HWSS_INTER_SOCK4_EVENT,
-                                                HWSS_INTER_SOCK5_EVENT,
-                                                HWSS_INTER_SOCK6_EVENT,
-                                                HWSS_INTER_SOCK7_EVENT};
-
 static esp_event_loop_handle_t s_hwss_event_loop=NULL;
 
 esp_err_t hwss_event_loop_create(void){

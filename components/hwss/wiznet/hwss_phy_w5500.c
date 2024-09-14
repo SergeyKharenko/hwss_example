@@ -350,7 +350,7 @@ hwss_phy_t *hwss_phy_new_w5500(const hwss_io_t *io, const hwss_phy_config_t *phy
     };
     ESP_GOTO_ON_ERROR(esp_timer_create(&timer_arg,&phy->check_timer),err,TAG,"create check timer failed");
 
-    return phy->super;
+    return &phy->super;
 err:
     if(phy)
         free(phy);
