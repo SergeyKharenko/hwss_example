@@ -6,16 +6,19 @@
 
 typedef enum{
     HWSS_IO_SPI =           0x00,
-    HWSS_IO_PARALLEL_8 =    0x01,
-    HWSS_IO_PARALLEL_16 =   0x02,
-    HWSS_IO_UART =          0x03,
+    HWSS_IO_SPI_PRO =       0x01,           // For CH395 only 
+    HWSS_IO_PARALLEL_8 =    0x02,
+    HWSS_IO_PARALLEL_16 =   0x03,
+    HWSS_IO_FAST_PARALLEL_8 =   0x04,
+    HWSS_IO_FAST_PARALLEL_16 =  0x05,
+    HWSS_IO_UART =          0x06,
 
     HWSS_IO_TYPE_END =      0xFF
-}hwss_io_type;
+}hwss_io_type_t;
 
-#define HWSS_IO_TYPE_LIST(name)                      const hwss_io_type name[]
+typedef hwss_io_type_t      (hwss_io_types_t)[];
 
-bool hwss_io_type_supported(const hwss_io_type list[], hwss_io_type type);
+bool hwss_io_type_supported(const hwss_io_types_t list, hwss_io_type_t type);
 
 typedef enum {
     HWSS_PHY_AUTONEGO_RESTART,
@@ -50,12 +53,13 @@ typedef enum{
 } hwss_proto_t;
 
 #define HWSS_MAC_ADDR_LEN       6
-typedef uint8_t*                hwss_mac_addr_t; 
+#define HWSS_IP_ADDR_LEN        4
+
+typedef uint8_t (hwss_mac_addr_t)[HWSS_MAC_ADDR_LEN];
+typedef uint8_t (hwss_ip_addr_t)[HWSS_IP_ADDR_LEN];
 
 typedef uint8_t                 hwss_devid_t;
 typedef uint8_t                 hwss_sockid_t;
 typedef uint16_t                hwss_port_t;
-
-#define HWSS_SOCKID_SPEC        0
 
 

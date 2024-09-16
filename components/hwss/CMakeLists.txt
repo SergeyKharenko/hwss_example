@@ -5,7 +5,7 @@ list(APPEND srcs
                 # "wiznet/hwss_hnet_w5500.c"
                 # "wiznet/hwss_hso_w5500.c"
                 "wiznet/hwss_io_w5500.c"
-                # "wiznet/hwss_mac_w5500.c"
+                "wiznet/hwss_mac_w5500.c"
                 "wiznet/hwss_phy_w5500.c"
                 )
 list(APPEND inc_dirs "wiznet")
