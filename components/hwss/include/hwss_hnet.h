@@ -21,14 +21,14 @@ struct hwss_hnet_s{
     esp_err_t (*init)(hwss_hnet_t *hnet);
     esp_err_t (*deinit)(hwss_hnet_t *hnet);
 
-    esp_err_t (*set_gateway_addr)(hwss_hnet_t *hnet, const uint8_t *addr);
-    esp_err_t (*get_gateway_addr)(hwss_hnet_t *hnet, uint8_t *addr);
+    esp_err_t (*set_gateway_addr)(hwss_hnet_t *hnet, const hwss_ip_addr_t addr);
+    esp_err_t (*get_gateway_addr)(hwss_hnet_t *hnet, hwss_ip_addr_t addr);
 
-    esp_err_t (*set_subnet_mask)(hwss_hnet_t *hnet, const uint8_t *mask);
-    esp_err_t (*get_subnet_mask)(hwss_hnet_t *hnet, uint8_t *mask);
+    esp_err_t (*set_subnet_mask)(hwss_hnet_t *hnet, const hwss_ip_addr_t mask);
+    esp_err_t (*get_subnet_mask)(hwss_hnet_t *hnet, hwss_ip_addr_t mask);
 
-    esp_err_t (*set_source_addr)(hwss_hnet_t *hnet, const uint8_t *addr);
-    esp_err_t (*get_source_addr)(hwss_hnet_t *hnet, uint8_t *addr);
+    esp_err_t (*set_source_addr)(hwss_hnet_t *hnet, const hwss_ip_addr_t addr);
+    esp_err_t (*get_source_addr)(hwss_hnet_t *hnet, hwss_ip_addr_t addr);
 
     esp_err_t (*set_retry_time)(hwss_hnet_t *hnet, const uint16_t *ms);
     esp_err_t (*get_retry_time)(hwss_hnet_t *hnet, uint16_t *ms);
@@ -36,8 +36,8 @@ struct hwss_hnet_s{
     esp_err_t (*set_retry_cnt)(hwss_hnet_t *hnet, const uint8_t *cnt);
     esp_err_t (*get_retry_cnt)(hwss_hnet_t *hnet, uint8_t *cnt);
 
-    esp_err_t (*get_unreachable_addr)(hwss_hnet_t *hnet, uint8_t *addr);
-    esp_err_t (*get_unreachable_port)(hwss_hnet_t *hnet, uint16_t *port);
+    esp_err_t (*get_unreachable_addr)(hwss_hnet_t *hnet, hwss_ip_addr_t addr);
+    esp_err_t (*get_unreachable_port)(hwss_hnet_t *hnet, hwss_port_t *port);
 
     esp_err_t (*set_ppp_link_cp_request_time)(hwss_hnet_t *hnet, const uint16_t *ms);
     esp_err_t (*get_ppp_link_cp_request_time)(hwss_hnet_t *hnet, uint16_t *ms);
@@ -45,8 +45,8 @@ struct hwss_hnet_s{
     esp_err_t (*set_ppp_link_cp_magic_num)(hwss_hnet_t *hnet, const uint8_t *num);
     esp_err_t (*get_ppp_link_cp_magic_num)(hwss_hnet_t *hnet, uint8_t *num);
 
-    esp_err_t (*set_ppp_dest_mac_addr)(hwss_hnet_t *hnet, const uint8_t *mac_addr);
-    esp_err_t (*get_ppp_dest_mac_addr)(hwss_hnet_t *hnet, uint8_t *mac_addr);
+    esp_err_t (*set_ppp_dest_mac_addr)(hwss_hnet_t *hnet, const hwss_mac_addr_t mac_addr);
+    esp_err_t (*get_ppp_dest_mac_addr)(hwss_hnet_t *hnet, hwss_mac_addr_t mac_addr);
 
     esp_err_t (*set_ppp_sess_id)(hwss_hnet_t *hnet, const uint16_t *id);
     esp_err_t (*get_ppp_sess_id)(hwss_hnet_t *hnet, uint16_t *id);

@@ -6,6 +6,10 @@
 #include "esp_check.h"
 #include "hwss_io.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define WIZNET_IO_LOCK_TIMEOUT_MS                           20
 
 typedef struct{
@@ -48,7 +52,7 @@ inline esp_err_t hwss_io_wiznet_spi_trans(hwss_io_t *io, spi_transaction_t *tran
     return ret;
 }
 
-inline hwss_io_wiznet_spi_t *hwss_io_new_wiznet_spi(hwss_io_spi_config_t* config){
+inline hwss_io_wiznet_spi_t *hwss_io_new_wiznet_spi(const hwss_io_spi_config_t* config){
     hwss_io_wiznet_spi_t *io_wiznet_spi=NULL;
     io_wiznet_spi = (hwss_io_wiznet_spi_t *) calloc(1,sizeof(hwss_io_wiznet_spi_t));
     if(io_wiznet_spi==NULL)
@@ -62,3 +66,7 @@ inline hwss_io_wiznet_spi_t *hwss_io_new_wiznet_spi(hwss_io_spi_config_t* config
     io_wiznet_spi->lock=xSemaphoreCreateMutex();
     return io_wiznet_spi;
 }
+
+#ifdef __cplusplus
+}
+#endif

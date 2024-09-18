@@ -2,7 +2,7 @@ set(srcs "hwss_event.c" "hwss_hso_scm.c" "hwss_type.c")
 set(inc_dirs "include")
 
 list(APPEND srcs 
-                # "wiznet/hwss_hnet_w5500.c"
+                "wiznet/hwss_hnet_w5500.c"
                 # "wiznet/hwss_hso_w5500.c"
                 "wiznet/hwss_io_w5500.c"
                 "wiznet/hwss_mac_w5500.c"

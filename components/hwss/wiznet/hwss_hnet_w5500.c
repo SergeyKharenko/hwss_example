@@ -25,40 +25,40 @@ static void hwss_hnet_w5500_check_state_timer_cb(void *args){
     hwss_hnet_w5500_t* hnet_w5500=(hwss_hnet_w5500_t *)args;
 
     uint8_t ir;
-    if(getIR(hnet_w5500->super.io,&ir)!=ESP_OK){
+    if(W5500_getIR(hnet_w5500->super.io,&ir)!=ESP_OK){
         ESP_LOGE(TAG,"cannot read IR");
         return;
     }
 
-    if(ir&IR_CONFLICT){        
-        if(hwss_event_post(HWSS_INTER_NET_EVENT,HWSS_INTER_NET_EVENT_IP_CONFLICT,(void *)*hnet_w5500->super,
+    if(ir&W5500_IR_CONFLICT){        
+        if(hwss_event_post(HWSS_INTER_NET_EVENT,HWSS_INTER_NET_EVENT_IP_CONFLICT,(void *)&hnet_w5500->super,
                         sizeof(hwss_hnet_t *),0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
         }
     }
 
-    if(ir&IR_UNREACH){        
-        if(hwss_event_post(HWSS_INTER_NET_EVENT,HWSS_INTER_NET_EVENT_DEST_UNREACH,(void *)*hnet_w5500->super,
+    if(ir&W5500_IR_UNREACH){        
+        if(hwss_event_post(HWSS_INTER_NET_EVENT,HWSS_INTER_NET_EVENT_DEST_UNREACH,(void *)&hnet_w5500->super,
                         sizeof(hwss_hnet_t *),0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
         }
     }
 
-    if(ir&IR_PPPoE){        
-        if(hwss_event_post(HWSS_INTER_NET_EVENT,HWSS_INTER_NET_EVENT_PPPOE_CLOSE,(void *)*hnet_w5500->super,
+    if(ir&W5500_IR_PPPoE){        
+        if(hwss_event_post(HWSS_INTER_NET_EVENT,HWSS_INTER_NET_EVENT_PPPOE_CLOSE,(void *)&hnet_w5500->super,
                         sizeof(hwss_hnet_t *),0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
         }
     }
 
-    if(ir&IR_MP){        
-        if(hwss_event_post(HWSS_INTER_NET_EVENT,HWSS_INTER_NET_EVENT_MAGIC_PACK,(void *)*hnet_w5500->super,
+    if(ir&W5500_IR_MP){        
+        if(hwss_event_post(HWSS_INTER_NET_EVENT,HWSS_INTER_NET_EVENT_MAGIC_PACK,(void *)&hnet_w5500->super,
                         sizeof(hwss_hnet_t *),0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
         }
     }
 
-    if(setIR(hnet_w5500->super.io,&ir)!=ESP_OK){
+    if(W5500_setIR(hnet_w5500->super.io,&ir)!=ESP_OK){
         ESP_LOGE(TAG,"cannot write IR");
         return;
     }
@@ -69,16 +69,16 @@ static esp_err_t hwss_hnet_w5500_init(hwss_hnet_t *hnet){
     esp_err_t ret=ESP_OK;
     hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
 
-    ESP_GOTO_ON_ERROR(setRTR(hnet->io, &(hnet_w5500->retry_tick)),err,TAG,"cannot write RTR");
-    ESP_GOTO_ON_ERROR(setRCR(hnet->io, &(hnet_w5500->retry_cnt)),err,TAG,"cannot write RCR");
-    ESP_GOTO_ON_ERROR(setPTIMER(hnet->io,&(hnet_w5500->cp_request_tick)),err,TAG,"cannot write PTIMER");
-    ESP_GOTO_ON_ERROR(setPMAGIC(hnet->io,&(hnet_w5500->cp_magic_num)),err,TAG,"cannot write PMAGIC");
+    ESP_GOTO_ON_ERROR(W5500_setRTR(hnet->io, &(hnet_w5500->retry_tick)),err,TAG,"cannot write RTR");
+    ESP_GOTO_ON_ERROR(W5500_setRCR(hnet->io, &(hnet_w5500->retry_cnt)),err,TAG,"cannot write RCR");
+    ESP_GOTO_ON_ERROR(W5500_setPTIMER(hnet->io,&(hnet_w5500->ppp_cp_request_tick)),err,TAG,"cannot write PTIMER");
+    ESP_GOTO_ON_ERROR(W5500_setPMAGIC(hnet->io,&(hnet_w5500->ppp_cp_magic_num)),err,TAG,"cannot write PMAGIC");
 
-    uint8_t ir=IR_CONFLICT|IR_UNREACH|IR_PPPoE|IR_MP;
-    ESP_GOTO_ON_ERROR(setIR(hnet->io,&ir),err,TAG,"cannot write IR");
+    uint8_t ir=W5500_IR_CONFLICT|W5500_IR_UNREACH|W5500_IR_PPPoE|W5500_IR_MP;
+    ESP_GOTO_ON_ERROR(W5500_setIR(hnet->io,&ir),err,TAG,"cannot write IR");
 
-    uint8_t imr=IM_IR7|IM_IR6|IM_IR5|IM_IR4;
-    ESP_GOTO_ON_ERROR(setIMR(hnet->io,&imr),err,TAG,"cannot write IMR");
+    uint8_t imr=W5500_IM_IR7|W5500_IM_IR6|W5500_IM_IR5|W5500_IM_IR4;
+    ESP_GOTO_ON_ERROR(W5500_setIMR(hnet->io,&imr),err,TAG,"cannot write IMR");
 
     ESP_GOTO_ON_ERROR(esp_timer_start_periodic(hnet_w5500->check_state_timer,hnet_w5500->check_state_period_ms*1000),
                         err,TAG,"cannot start timer");
@@ -91,44 +91,44 @@ static esp_err_t hwss_hnet_w5500_deinit(hwss_hnet_t *hnet){
     return ESP_OK;
 }
 
-static esp_err_t hwss_hnet_w5500_set_gateway_addr(hwss_hnet_t *hnet, const uint8_t *addr){
+static esp_err_t hwss_hnet_w5500_set_gateway_addr(hwss_hnet_t *hnet, const hwss_ip_addr_t addr){
     esp_err_t ret=ESP_OK;
-    ESP_GOTO_ON_ERROR(setGAR(hnet->io, addr),err,TAG,"cannot write GAR");
+    ESP_GOTO_ON_ERROR(W5500_setGAR(hnet->io, addr),err,TAG,"cannot write GAR");
 err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5500_get_gateway_addr(hwss_hnet_t *hnet, uint8_t *addr){
+static esp_err_t hwss_hnet_w5500_get_gateway_addr(hwss_hnet_t *hnet, hwss_ip_addr_t addr){
     esp_err_t ret=ESP_OK;
-    ESP_GOTO_ON_ERROR(getGAR(hnet->io, addr),err,TAG,"cannot read GAR");
+    ESP_GOTO_ON_ERROR(W5500_getGAR(hnet->io, addr),err,TAG,"cannot read GAR");
 err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5500_set_subnet_mask(hwss_hnet_t *hnet, const uint8_t *mask){
+static esp_err_t hwss_hnet_w5500_set_subnet_mask(hwss_hnet_t *hnet, const hwss_ip_addr_t mask){
     esp_err_t ret=ESP_OK;
-    ESP_GOTO_ON_ERROR(setSUBR(hnet->io, mask),err,TAG,"cannot write SUBR");
+    ESP_GOTO_ON_ERROR(W5500_setSUBR(hnet->io, mask),err,TAG,"cannot write SUBR");
 err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5500_get_subnet_mask(hwss_hnet_t *hnet, uint8_t *mask){
+static esp_err_t hwss_hnet_w5500_get_subnet_mask(hwss_hnet_t *hnet, hwss_ip_addr_t mask){
     esp_err_t ret=ESP_OK;
-    ESP_GOTO_ON_ERROR(getSUBR(hnet->io, mask),err,TAG,"cannot read SUBR");
+    ESP_GOTO_ON_ERROR(W5500_getSUBR(hnet->io, mask),err,TAG,"cannot read SUBR");
 err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5500_set_source_addr(hwss_hnet_t *hnet, const uint8_t *addr){
+static esp_err_t hwss_hnet_w5500_set_source_addr(hwss_hnet_t *hnet, const hwss_ip_addr_t addr){
     esp_err_t ret=ESP_OK;
-    ESP_GOTO_ON_ERROR(setSIPR(hnet->io, addr),err,TAG,"cannot write SIPR");
+    ESP_GOTO_ON_ERROR(W5500_setSIPR(hnet->io, addr),err,TAG,"cannot write SIPR");
 err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5500_get_source_addr(hwss_hnet_t *hnet, uint8_t *addr){
+static esp_err_t hwss_hnet_w5500_get_source_addr(hwss_hnet_t *hnet, hwss_ip_addr_t addr){
     esp_err_t ret=ESP_OK;
-    ESP_GOTO_ON_ERROR(getSIPR(hnet->io, addr),err,TAG,"cannot read SIPR");
+    ESP_GOTO_ON_ERROR(W5500_getSIPR(hnet->io, addr),err,TAG,"cannot read SIPR");
 err:
     return ret;
 }
@@ -138,7 +138,7 @@ static esp_err_t hwss_hnet_w5500_set_retry_time(hwss_hnet_t *hnet, const uint16_
     hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
     uint16_t tick=*ms*10;
 
-    ESP_GOTO_ON_ERROR(setRTR(hnet->io, &tick),err,TAG,"cannot write RTR");
+    ESP_GOTO_ON_ERROR(W5500_setRTR(hnet->io, &tick),err,TAG,"cannot write RTR");
     hnet_w5500->retry_tick=tick;
 err:
     return ret;
@@ -148,7 +148,7 @@ static esp_err_t hwss_hnet_w5500_get_retry_time(hwss_hnet_t *hnet, uint16_t *ms)
     esp_err_t ret=ESP_OK;
     uint16_t tick=0;
 
-    ESP_GOTO_ON_ERROR(getRTR(hnet->io, &tick),err,TAG,"cannot read RTR");
+    ESP_GOTO_ON_ERROR(W5500_getRTR(hnet->io, &tick),err,TAG,"cannot read RTR");
     *ms=tick/10;
 err:
     return ret;
@@ -158,7 +158,7 @@ static esp_err_t hwss_hnet_w5500_set_retry_cnt(hwss_hnet_t *hnet, const uint8_t 
     esp_err_t ret=ESP_OK;
     hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
 
-    ESP_GOTO_ON_ERROR(setRCR(hnet->io, cnt),err,TAG,"cannot write RCR");
+    ESP_GOTO_ON_ERROR(W5500_setRCR(hnet->io, cnt),err,TAG,"cannot write RCR");
     hnet_w5500->retry_cnt=*cnt;
 err:
     return ret;
@@ -167,23 +167,23 @@ err:
 static esp_err_t hwss_hnet_w5500_get_retry_cnt(hwss_hnet_t *hnet, uint8_t *cnt){
     esp_err_t ret=ESP_OK;
 
-    ESP_GOTO_ON_ERROR(getRCR(hnet->io, cnt),err,TAG,"cannot read RCR");
+    ESP_GOTO_ON_ERROR(W5500_getRCR(hnet->io, cnt),err,TAG,"cannot read RCR");
 err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5500_get_unreachable_addr(hwss_hnet_t *hnet, uint8_t *addr){
+static esp_err_t hwss_hnet_w5500_get_unreachable_addr(hwss_hnet_t *hnet, hwss_ip_addr_t addr){
     esp_err_t ret=ESP_OK;
 
-    ESP_GOTO_ON_ERROR(getUIPR(hnet->io, addr),err,TAG,"cannot read UIPR");
+    ESP_GOTO_ON_ERROR(W5500_getUIPR(hnet->io, addr),err,TAG,"cannot read UIPR");
 err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5500_get_unreachable_port(hwss_hnet_t *hnet, uint16_t *port){
+static esp_err_t hwss_hnet_w5500_get_unreachable_port(hwss_hnet_t *hnet, hwss_port_t *port){
     esp_err_t ret=ESP_OK;
 
-    ESP_GOTO_ON_ERROR(getUPORTR(hnet->io, port),err,TAG,"cannot read UPORTR");
+    ESP_GOTO_ON_ERROR(W5500_getUPORTR(hnet->io, port),err,TAG,"cannot read UPORTR");
 err:
     return ret;
 }
@@ -194,7 +194,7 @@ static esp_err_t hwss_hnet_w5500_set_ppp_link_cp_request_time(hwss_hnet_t *hnet,
     ESP_GOTO_ON_FALSE(CP_REQ_MS2TICK(*ms)<=0xFF,ESP_ERR_INVALID_ARG,err,TAG,"control protocol request time too long");
 
     uint8_t tick=(uint8_t) CP_REQ_MS2TICK(*ms);
-    ESP_GOTO_ON_ERROR(setPTIMER(hnet->io,&tick),err,TAG,"cannot write PTIMER");
+    ESP_GOTO_ON_ERROR(W5500_setPTIMER(hnet->io,&tick),err,TAG,"cannot write PTIMER");
     hnet_w5500->ppp_cp_request_tick=tick;
 err:
     return ret;    
@@ -203,7 +203,7 @@ err:
 static esp_err_t hwss_hnet_w5500_get_ppp_link_cp_request_time(hwss_hnet_t *hnet, uint16_t *ms){
     esp_err_t ret=ESP_OK;
     uint8_t tick=0;
-    ESP_GOTO_ON_ERROR(getPTIMER(hnet->io,&tick),err,TAG,"cannot read PTIMER");
+    ESP_GOTO_ON_ERROR(W5500_getPTIMER(hnet->io,&tick),err,TAG,"cannot read PTIMER");
     *ms=(uint16_t) CP_REQ_TICK2MS(tick);
 err:
     return ret;    
@@ -213,7 +213,7 @@ static esp_err_t hwss_hnet_w5500_set_ppp_link_cp_magic_num(hwss_hnet_t *hnet, co
     esp_err_t ret=ESP_OK;
     hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
 
-    ESP_GOTO_ON_ERROR(setPMAGIC(hnet->io,num),err,TAG,"cannot write PMAGIC");
+    ESP_GOTO_ON_ERROR(W5500_setPMAGIC(hnet->io,num),err,TAG,"cannot write PMAGIC");
     hnet_w5500->ppp_cp_magic_num=*num;
 err:
     return ret;
@@ -221,49 +221,49 @@ err:
 
 static esp_err_t hwss_hnet_w5500_get_ppp_link_cp_magic_num(hwss_hnet_t *hnet, uint8_t *num){
     esp_err_t ret=ESP_OK;
-    ESP_GOTO_ON_ERROR(getPMAGIC(hnet->io,num),err,TAG,"cannot read PMAGIC");
+    ESP_GOTO_ON_ERROR(W5500_getPMAGIC(hnet->io,num),err,TAG,"cannot read PMAGIC");
 err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5500_set_ppp_dest_mac_addr(hwss_hnet_t *hnet, const uint8_t *mac_addr){
+static esp_err_t hwss_hnet_w5500_set_ppp_dest_mac_addr(hwss_hnet_t *hnet, const hwss_mac_addr_t mac_addr){
     esp_err_t ret=ESP_OK;
-    ESP_GOTO_ON_ERROR(setPHAR(hnet->io,mac_addr),err,TAG,"cannot write PHAR");
+    ESP_GOTO_ON_ERROR(W5500_setPHAR(hnet->io,mac_addr),err,TAG,"cannot write PHAR");
 err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5500_get_ppp_dest_mac_addr(hwss_hnet_t *hnet, uint8_t *mac_addr){
+static esp_err_t hwss_hnet_w5500_get_ppp_dest_mac_addr(hwss_hnet_t *hnet, hwss_mac_addr_t mac_addr){
     esp_err_t ret=ESP_OK;
-    ESP_GOTO_ON_ERROR(getPHAR(hnet->io,mac_addr),err,TAG,"cannot read PHAR");
+    ESP_GOTO_ON_ERROR(W5500_getPHAR(hnet->io,mac_addr),err,TAG,"cannot read PHAR");
 err:
     return ret;
 }
 
 static esp_err_t hwss_hnet_w5500_set_ppp_sess_id(hwss_hnet_t *hnet, const uint16_t *id){
     esp_err_t ret=ESP_OK;
-    ESP_GOTO_ON_ERROR(setPSID(hnet->io,id),err,TAG,"cannot write PSID");
+    ESP_GOTO_ON_ERROR(W5500_setPSID(hnet->io,id),err,TAG,"cannot write PSID");
 err:
     return ret;
 }
 
 static esp_err_t hwss_hnet_w5500_get_ppp_sess_id(hwss_hnet_t *hnet, uint16_t *id){
     esp_err_t ret=ESP_OK;
-    ESP_GOTO_ON_ERROR(getPSID(hnet->io,id),err,TAG,"cannot read PSID");
+    ESP_GOTO_ON_ERROR(W5500_getPSID(hnet->io,id),err,TAG,"cannot read PSID");
 err:
     return ret;
 }
 
 static esp_err_t hwss_hnet_w5500_set_ppp_max_recv_unit(hwss_hnet_t *hnet, const uint16_t *unit){
     esp_err_t ret=ESP_OK;
-    ESP_GOTO_ON_ERROR(setPMRU(hnet->io,unit),err,TAG,"cannot write PMRU");
+    ESP_GOTO_ON_ERROR(W5500_setPMRU(hnet->io,unit),err,TAG,"cannot write PMRU");
 err:
     return ret;
 }
 
 static esp_err_t hwss_hnet_w5500_get_ppp_max_recv_unit(hwss_hnet_t *hnet, uint16_t *unit){
     esp_err_t ret=ESP_OK;
-    ESP_GOTO_ON_ERROR(getPMRU(hnet->io,unit),err,TAG,"cannot read PMRU");
+    ESP_GOTO_ON_ERROR(W5500_getPMRU(hnet->io,unit),err,TAG,"cannot read PMRU");
 err:
     return ret;
 }

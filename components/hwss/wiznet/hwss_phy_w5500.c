@@ -78,10 +78,12 @@ static void hwss_phy_w5500_check_timer_cb(void *args){
         if(link==HWSS_LINK_UP){
             if(hwss_event_post(HWSS_EVENT,HWSS_EVENT_CONNECTED,(void *)&phy_w5500->super,sizeof(hwss_phy_t *),0)!= ESP_OK)
                 ESP_LOGE(TAG,"fail to post event");
+            ESP_LOGD(TAG,"Connected");
         }
         else{
             if(hwss_event_post(HWSS_EVENT,HWSS_EVENT_DISCONNECTED,(void *)&phy_w5500->super,sizeof(hwss_phy_t *),0)!=ESP_OK)
                 ESP_LOGE(TAG,"fail to post event");
+            ESP_LOGD(TAG,"Disconnected");
         }
     }
 }

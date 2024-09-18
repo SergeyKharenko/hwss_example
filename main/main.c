@@ -1,14 +1,18 @@
 #include <stdio.h>
 #include "esp_log.h"
+#include "hwss_hnet_wiznet.h"
 #include "hwss_mac_wiznet.h"
 #include "hwss_phy_wiznet.h"
 #include "hwss_io_wiznet.h"
+#include "hwss_event.h"
 #include "driver/gpio.h"
 #include "drv_w5500.h"
 
 #define GPIO_RST_PIN                    9
 
 static const char *TAG="main";
+
+
 
 hwss_io_spi_config_t cfg={
     .spi_host_id=SPI2_HOST,
@@ -25,6 +29,32 @@ hwss_mac_config_t mcfg={
     .addr={0x00,0x08,0xDC,0x01,0x02,0x03},
     .use_burnin_addr=false
 };
+
+hwss_hnet_config_t ncfg={
+    .check_state_period_ms=50,
+    .retry_cnt=8,
+    .retry_time_ms=200,
+    .ppp_cp_magic_num=0,
+    .ppp_cp_request_time_ms=1000
+};
+
+static void hwss_event_handler(void *arg, esp_event_base_t event_base,
+                              int32_t event_id, void *event_data){
+    switch (event_id)
+    {
+    case HWSS_EVENT_CONNECTED:
+        ESP_LOGI(TAG,"CONNECTED!");
+        break;
+    
+    case HWSS_EVENT_DISCONNECTED:
+        ESP_LOGW(TAG,"DISCONNECTED!");
+        break;
+
+    default:
+        break;
+    }
+
+}
 
 void app_main(void)
 {
@@ -53,29 +83,42 @@ void app_main(void)
     hwss_io_t *io=hwss_io_new_w5500(HWSS_IO_SPI,&cfg);
     hwss_phy_t *phy=hwss_phy_new_w5500(io,&pcfg);
     hwss_mac_t *mac=hwss_mac_new_w5500(io,&mcfg);
+    hwss_hnet_t *hnet=hwss_hnet_new_w5500(io,&ncfg);
+
+    hwss_event_loop_create();
+    // hwss_event_handler_register(HWSS_EVENT,HWSS_EVENT_ANY_ID,hwss_event_handler,NULL);
 
     io->init(io);
     phy->init(phy);
     mac->init(mac);
-
-
+    hnet->init(hnet);
+    
     // uint8_t ver=0;
     // W5500_getVERSIONR(io,&ver);
     // ESP_LOGW(TAG,"Version:%X",ver);
 
     // hwss_mac_addr_t mac=(uint8_t []){0x00,0x08,0xDC,0x02,0x03,0x04};
-    // hwss_mac_addr_t mac_res=malloc(6);
-
+    hwss_mac_addr_t mac_res;
+    mac->get_addr(mac,mac_res);
     // W5500_getSHAR(io,mac_res);
 
-    // ESP_LOGI(TAG,"MAC: %X:%X:%X:%X:%X:%X",mac_res[0],mac_res[1],mac_res[2],mac_res[3],mac_res[4],mac_res[5]);
+    ESP_LOGI(TAG,"MAC: %X:%X:%X:%X:%X:%X",mac_res[0],mac_res[1],mac_res[2],mac_res[3],mac_res[4],mac_res[5]);
+
+    hwss_ip_addr_t ip={192,168,0,10};
+    hwss_ip_addr_t gip={192,168,0,1};
+    hwss_ip_addr_t mask={255,255,255,0};
+
+    hnet->set_source_addr(hnet,ip);
+    hnet->set_gateway_addr(hnet,gip);
+    hnet->set_subnet_mask(hnet,mask);
+
 
     // W5500_setSHAR(io,mac);
 
     // W5500_getSHAR(io,mac_res);
 
     // ESP_LOGI(TAG,"MAC: %X:%X:%X:%X:%X:%X",mac_res[0],mac_res[1],mac_res[2],mac_res[3],mac_res[4],mac_res[5]);
-
+    // uint8_t phy_sta;
     while(1){
         // W5500_getPHYCFGR(io,&phy_sta);
         // ESP_LOGI(TAG,"%X",phy_sta);

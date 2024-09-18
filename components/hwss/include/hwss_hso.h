@@ -75,6 +75,8 @@ struct hwss_hso_s{
 
     esp_err_t (*get_sock_state)(hwss_hso_t *hso, hwss_sockid_t id, hwss_hso_socksta_t *sta);
     esp_err_t (*get_sock_state_raw)(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *sta);
+
+    
 };
 
 typedef struct{

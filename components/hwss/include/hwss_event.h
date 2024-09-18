@@ -23,6 +23,9 @@ typedef enum{
     
 }hwss_event_t;
 
+#define HWSS_EVENT_ANY_ID                       -1
+#define HWSS_EVENT_ANY_BASE                     NULL
+
 ESP_EVENT_DECLARE_BASE(HWSS_EVENT);
 
 ESP_EVENT_DECLARE_BASE(HWSS_INTER_NET_EVENT);

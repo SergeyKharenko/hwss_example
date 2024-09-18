@@ -64,7 +64,7 @@ static esp_err_t hwss_io_w5500_spi_write_buf(hwss_io_t *io, uint32_t cmd, uint32
 }
 
 
-static hwss_io_t *hwss_io_new_w5500_spi(hwss_io_spi_config_t* config){
+static hwss_io_t *hwss_io_new_w5500_spi(const hwss_io_spi_config_t* config){
     hwss_io_t *ret=NULL;
     hwss_io_wiznet_spi_t *io_w5500_spi=NULL;
 
@@ -92,9 +92,8 @@ err:
     return ret;
 }
 
-hwss_io_t *hwss_io_new_w5500(hwss_io_type_t type, void *io_config){
+hwss_io_t *hwss_io_new_w5500(hwss_io_type_t type, const void *io_config){
     ESP_RETURN_ON_FALSE(hwss_io_type_supported(W5500_IO_SUPPORT_LIST,type),NULL,TAG,"unsupported io type");
     ESP_RETURN_ON_FALSE(io_config, NULL, TAG, "cannot set io config to null");
     return hwss_io_new_w5500_spi(io_config);
 }
-
