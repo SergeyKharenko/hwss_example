@@ -2,10 +2,12 @@
 
 #include <stdbool.h>
 
+#include "driver/dedic_gpio.h"
 #include "driver/gpio.h"
 #include "driver/spi_common.h"
 #include "driver/spi_master.h"
 #include "driver/uart.h"
+
 #include "esp_err.h"
 
 #include "hwss_type.h"

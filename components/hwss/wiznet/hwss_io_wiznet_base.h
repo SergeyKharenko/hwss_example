@@ -67,6 +67,31 @@ inline hwss_io_wiznet_spi_t *hwss_io_new_wiznet_spi(const hwss_io_spi_config_t* 
     return io_wiznet_spi;
 }
 
+typedef struct{
+    hwss_io_t           super;
+    uint8_t             io_width;
+    gpio_num_t          io_nums[16];
+
+    uint8_t             addr_io_width;
+    gpio_num_t          addr_io_nums[8];
+
+    gpio_num_t          wr_io_num;
+    gpio_num_t          rd_io_num;
+
+    dedic_gpio_bundle_handle_t data_hdl;
+    dedic_gpio_bundle_handle_t ctrl_hdl;
+    SemaphoreHandle_t   lock;
+}hwss_io_wiznet_fast_parallel_t;
+
+
+inline bool IO_WIZNET_FAST_PARALLEL_LOCK(hwss_io_wiznet_fast_parallel_t *io){
+    return (xSemaphoreTake(io->lock,pdMS_TO_TICKS(WIZNET_IO_LOCK_TIMEOUT_MS)) == pdTRUE);
+}
+
+inline bool IO_WIZNET_FAST_PARALLEL_UNLOCK(hwss_io_wiznet_fast_parallel_t *io){
+    return (xSemaphoreGive(io->lock) == pdTRUE);
+}
+
 #ifdef __cplusplus
 }
 #endif
