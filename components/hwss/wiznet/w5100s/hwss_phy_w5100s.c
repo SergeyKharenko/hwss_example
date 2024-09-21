@@ -123,6 +123,7 @@ esp_err_t hwss_phy_w5100s_autonego_ctrl(hwss_phy_t *phy, hwss_phy_autoneg_cmd_t 
     esp_err_t ret = ESP_OK;
     hwss_phy_w5100s_t *phy_w5100s=__containerof(phy,hwss_phy_w5100s_t,super);
     uint8_t stat;
+    uint8_t mode;
 
     ESP_GOTO_ON_ERROR(W5100S_getPHYSR(phy_w5100s->super.io,&stat),err,TAG,"fail to read PHYSR");
 
@@ -149,48 +150,34 @@ esp_err_t hwss_phy_w5100s_autonego_ctrl(hwss_phy_t *phy, hwss_phy_autoneg_cmd_t 
         break;
 
     case HWSS_PHY_AUTONEGO_DIS:
-        uint8_t mode=0;
-        if (stat&W5100S_PHYSR_DUP) { // Full duplex
-            if (stat.val&W5500_PHYCFGR_SPD_100) { // 100 Mbps speed
-                stat.opmode = W5500_OP_MODE_100BT_FULL_AUTO_DIS;
-            } else {
-                stat.opmode = W5500_OP_MODE_10BT_FULL_AUTO_DIS;
-            }
-        } else {
-            if (stat.val&W5500_PHYCFGR_SPD_100) { // 100 Mbps speed
-                stat.opmode = W5500_OP_MODE_100BT_HALF_AUTO_DIS;
-            } else {
-                stat.opmode = W5500_OP_MODE_10BT_HALF_AUTO_DIS;
-            }
-        }
-        stat.val|=W5500_PHYCFGR_OPMD;
-        stat.val&=W5500_PHYCFGR_RST;
-        ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)), err, TAG, "write PHYCFG failed");
+        mode=W5100S_PHYCR_AUTONEGO_DISABLE;
 
-        vTaskDelay(pdMS_TO_TICKS(phy_w5100s->reset_timeout_ms));
+        if (stat&W5100S_PHYSR_DUP) // Half duplex
+            mode|=W5100S_PHYCR_HALF_DUP;
+        else
+            mode|=W5100S_PHYCR_FULL_DUP;
 
-        stat.val|=~W5500_PHYCFGR_RST;
-        ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)), err, TAG, "write PHYCFG failed");
+        if(stat&W5100S_PHYSR_SPD) // 10 Mbps speed
+            mode|=W5100S_PHYCR_SPD_10;
+        else
+            mode|=W5100S_PHYCR_SPD_100;
 
+        ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,false),err,TAG,"fail to unlock PHY");
+        ESP_GOTO_ON_ERROR(W5100S_setPHYCR0(phy->io,&mode),err,TAG,"fail to write PHYCR0");
+        ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,true),err,TAG,"fail to lock PHY");
         *autonego_en_stat = false;
         break;
 
     case HWSS_PHY_AUTONEGO_EN:
-        stat.val|=W5500_PHYCFGR_OPMD;
-        stat.val&=W5500_PHYCFGR_RST;
-        stat.opmode = W5500_OP_MODE_ALL_CAPABLE; // all capable, auto-negotiation enabled
-        ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)), err, TAG, "write PHYCFG failed");
-
-        vTaskDelay(pdMS_TO_TICKS(phy_w5100s->reset_timeout_ms));
-
-        stat.val|=~W5500_PHYCFGR_RST;
-        ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)), err, TAG, "write PHYCFG failed");
-
+        mode=W5100S_PHYCR_AUTONEGO_ENABLE;
+        ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,false),err,TAG,"fail to unlock PHY");
+        ESP_GOTO_ON_ERROR(W5100S_setPHYCR0(phy->io,&mode),err,TAG,"fail to write PHYCR0");
+        ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,true),err,TAG,"fail to lock PHY");
         *autonego_en_stat = true;
         break;
 
     case HWSS_PHY_AUTONEGO_G_STAT:
-        *autonego_en_stat = stat.opmode == W5500_OP_MODE_ALL_CAPABLE || stat.opmode == W5500_OP_MODE_100BT_HALF_AUTO_EN;
+        *autonego_en_stat = stat&W5100S_PHYSR_CAUTO;
         break;
 
     default:
@@ -230,32 +217,28 @@ esp_err_t hwss_phy_w5100s_get_link(hwss_phy_t *phy, hwss_link_t *link){
 esp_err_t hwss_phy_w5100s_set_speed(hwss_phy_t *phy, hwss_speed_t speed){
     esp_err_t ret = ESP_OK;
     hwss_phy_w5100s_t *phy_w5100s=__containerof(phy,hwss_phy_w5100s_t,super);
-    phycfg_reg_t stat;
+    uint8_t stat;
+    uint8_t mode=W5100S_PHYCR_AUTONEGO_DISABLE;
 
     atomic_store(&(phy_w5100s->link),HWSS_LINK_DOWN);
 
-    ESP_GOTO_ON_ERROR(W5500_getPHYCFGR(phy->io,&(stat.val)),err,TAG,"fail to read PHYCFGR");
-    if(stat.val&W5500_PHYCFGR_DPX_FULL){
-        if(speed==HWSS_SPEED_100M)
-            stat.opmode=W5500_OP_MODE_100BT_FULL_AUTO_DIS;
-        else
-            stat.opmode=W5500_OP_MODE_10BT_FULL_AUTO_DIS;
-    }
-    else{
-        if(speed==HWSS_SPEED_100M)
-            stat.opmode=W5500_OP_MODE_100BT_HALF_AUTO_DIS;
-        else
-            stat.opmode=W5500_OP_MODE_10BT_HALF_AUTO_DIS;
-    }
+    ESP_GOTO_ON_ERROR(W5100S_getPHYSR(phy_w5100s->super.io,&stat),err,TAG,"fail to read PHYSR");
+    
+    if(speed==HWSS_SPEED_10M)
+        mode|=W5100S_PHYCR_SPD_10;
+    else
+        mode|=W5100S_PHYCR_SPD_100;
 
-    stat.val|=W5500_PHYCFGR_OPMD;
-    stat.val&=W5500_PHYCFGR_RST;
-    ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)),err,TAG,"fail to write PHYCFGR");
-    vTaskDelay(pdMS_TO_TICKS(phy_w5100s->reset_timeout_ms));
+    if(stat&W5100S_PHYSR_DUP)
+        mode|=W5100S_PHYCR_HALF_DUP;
+    else
+        mode|=W5100S_PHYCR_FULL_DUP;
 
-    stat.val|=~W5500_PHYCFGR_RST;
-    ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)),err,TAG,"fail to write PHYCFGR");
+    ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,false),err,TAG,"fail to unlock PHY");
+    ESP_GOTO_ON_ERROR(W5100S_setPHYCR0(phy->io,&mode),err,TAG,"fail to write PHYCR0");
+    ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,true),err,TAG,"fail to lock PHY");
 
+    atomic_store(&(phy_w5100s->speed),speed);
 err:
     return ret;
 }
@@ -270,32 +253,28 @@ esp_err_t hwss_phy_w5100s_get_speed(hwss_phy_t *phy, hwss_speed_t *speed){
 esp_err_t hwss_phy_w5100s_set_duplex(hwss_phy_t *phy, hwss_duplex_t duplex){
     esp_err_t ret = ESP_OK;
     hwss_phy_w5100s_t *phy_w5100s=__containerof(phy,hwss_phy_w5100s_t,super);
-    phycfg_reg_t stat;
+    uint8_t stat;
+    uint8_t mode=W5100S_PHYCR_AUTONEGO_DISABLE;
 
     atomic_store(&(phy_w5100s->link),HWSS_LINK_DOWN);
 
-    ESP_GOTO_ON_ERROR(W5500_getPHYCFGR(phy->io,&(stat.val)),err,TAG,"fail to read PHYCFGR");
-    if(stat.val&W5500_PHYCFGR_SPD_100){
-        if(duplex==HWSS_DUPLEX_FULL)
-            stat.opmode=W5500_OP_MODE_100BT_FULL_AUTO_DIS;
-        else
-            stat.opmode=W5500_OP_MODE_100BT_HALF_AUTO_DIS;
-    }
-    else{
-        if(duplex==HWSS_DUPLEX_FULL)
-            stat.opmode=W5500_OP_MODE_10BT_FULL_AUTO_DIS;
-        else
-            stat.opmode=W5500_OP_MODE_10BT_HALF_AUTO_DIS;
-    }
+    ESP_GOTO_ON_ERROR(W5100S_getPHYSR(phy_w5100s->super.io,&stat),err,TAG,"fail to read PHYSR");
+    
+    if(duplex==HWSS_DUPLEX_FULL)
+        mode|=W5100S_PHYCR_FULL_DUP;
+    else
+        mode|=W5100S_PHYCR_HALF_DUP;
 
-    stat.val|=W5500_PHYCFGR_OPMD;
-    stat.val&=W5500_PHYCFGR_RST;
-    ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)),err,TAG,"fail to write PHYCFGR");
-    vTaskDelay(pdMS_TO_TICKS(phy_w5100s->reset_timeout_ms));
+    if(stat&W5100S_PHYSR_SPD)
+        mode|=W5100S_PHYCR_SPD_10;
+    else
+        mode|=W5100S_PHYCR_SPD_100;
 
-    stat.val|=~W5500_PHYCFGR_RST;
-    ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)),err,TAG,"fail to write PHYCFGR");
+    ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,false),err,TAG,"fail to unlock PHY");
+    ESP_GOTO_ON_ERROR(W5100S_setPHYCR0(phy->io,&mode),err,TAG,"fail to write PHYCR0");
+    ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,true),err,TAG,"fail to lock PHY");
 
+    atomic_store(&(phy_w5100s->duplex),duplex);
 err:
     return ret;
 }

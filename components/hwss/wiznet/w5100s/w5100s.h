@@ -1327,15 +1327,17 @@ connection.
 
 /**todo
  * @brief magic packet
+ * @warning change bit 1 to 0
  * @details
  */
-#define W5100S_IR2_MGC				(1<<1)
+#define W5100S_IR2_MGC				(1<<0)
 
 /**todo
  * @brief Magic packet interrupt mask bit
+ * @warning change bit 1 to 0
  * @details If this bit is set, each socket interrupt is enabled.
  */
-#define W5100S_IMR2_MGC			(1<<1)
+#define W5100S_IMR2_MGC			    (1<<0)
 
 /**todo
  * @brief

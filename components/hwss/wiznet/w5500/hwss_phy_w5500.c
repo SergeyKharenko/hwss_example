@@ -264,6 +264,7 @@ esp_err_t hwss_phy_w5500_set_speed(hwss_phy_t *phy, hwss_speed_t speed){
     stat.val|=~W5500_PHYCFGR_RST;
     ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)),err,TAG,"fail to write PHYCFGR");
 
+    atomic_store(&(phy_w5500->speed),speed);
 err:
     return ret;
 }
@@ -304,6 +305,7 @@ esp_err_t hwss_phy_w5500_set_duplex(hwss_phy_t *phy, hwss_duplex_t duplex){
     stat.val|=~W5500_PHYCFGR_RST;
     ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)),err,TAG,"fail to write PHYCFGR");
 
+    atomic_store(&(phy_w5500->duplex),duplex);
 err:
     return ret;
 }

@@ -62,7 +62,6 @@ static void hwss_hnet_w5500_check_state_timer_cb(void *args){
         ESP_LOGE(TAG,"cannot write IR");
         return;
     }
-
 }
 
 static esp_err_t hwss_hnet_w5500_init(hwss_hnet_t *hnet){
@@ -88,7 +87,12 @@ err:
 }
 
 static esp_err_t hwss_hnet_w5500_deinit(hwss_hnet_t *hnet){
-    return ESP_OK;
+    esp_err_t ret=ESP_OK;
+    hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
+    ESP_GOTO_ON_ERROR(esp_timer_stop(hnet_w5500->check_state_timer),err,TAG,"cannot stop timer");
+
+err:
+    return ret;
 }
 
 static esp_err_t hwss_hnet_w5500_set_gateway_addr(hwss_hnet_t *hnet, const hwss_ip_addr_t addr){
@@ -206,7 +210,7 @@ static esp_err_t hwss_hnet_w5500_get_ppp_link_cp_request_time(hwss_hnet_t *hnet,
     ESP_GOTO_ON_ERROR(W5500_getPTIMER(hnet->io,&tick),err,TAG,"cannot read PTIMER");
     *ms=(uint16_t) CP_REQ_TICK2MS(tick);
 err:
-    return ret;    
+    return ret;
 }
 
 static esp_err_t hwss_hnet_w5500_set_ppp_link_cp_magic_num(hwss_hnet_t *hnet, const uint8_t *num){

@@ -28,7 +28,7 @@ hwss_phy_config_t pcfg={
 };
 
 hwss_mac_config_t mcfg={
-    .addr={0x00,0x08,0xDC,0x01,0x02,0x03},
+    .addr={0x00,0x08,0xDC,0x01,0x02,0x04},
     .use_burnin_addr=false
 };
 
@@ -83,11 +83,15 @@ void app_main(void)
 
     spi_bus_initialize(SPI2_HOST,&bcfg,SPI_DMA_CH_AUTO);
 
-    /*
-    hwss_io_t *io=hwss_io_new_w5500(HWSS_IO_SPI,&cfg);
-    hwss_phy_t *phy=hwss_phy_new_w5500(io,&pcfg);
-    hwss_mac_t *mac=hwss_mac_new_w5500(io,&mcfg);
-    hwss_hnet_t *hnet=hwss_hnet_new_w5500(io,&ncfg);
+    
+    // hwss_io_t *io=hwss_io_new_w5500(HWSS_IO_SPI,&cfg);
+    hwss_io_t *io=hwss_io_new_w5100s(HWSS_IO_SPI,&cfg);
+    // hwss_phy_t *phy=hwss_phy_new_w5500(io,&pcfg);
+    hwss_phy_t *phy=hwss_phy_new_w5100s(io,&pcfg);
+    // hwss_mac_t *mac=hwss_mac_new_w5500(io,&mcfg);
+    hwss_mac_t *mac=hwss_mac_new_w5100s(io,&mcfg);
+    // hwss_hnet_t *hnet=hwss_hnet_new_w5500(io,&ncfg);
+    hwss_hnet_t *hnet=hwss_hnet_new_w5100s(io,&ncfg);
 
     hwss_event_loop_create();
     // hwss_event_handler_register(HWSS_EVENT,HWSS_EVENT_ANY_ID,hwss_event_handler,NULL);
@@ -112,16 +116,10 @@ void app_main(void)
     hwss_ip_addr_t gip={192,168,0,1};
     hwss_ip_addr_t mask={255,255,255,0};
 
-    hnet->set_source_addr(hnet,ip);
-    hnet->set_gateway_addr(hnet,gip);
-    hnet->set_subnet_mask(hnet,mask);
+    // hnet->set_source_addr(hnet,ip);
+    // hnet->set_gateway_addr(hnet,gip);
+    // hnet->set_subnet_mask(hnet,mask);
 
-    */
-    uint8_t ver;
-    hwss_io_t *io=hwss_io_new_w5100s(HWSS_IO_SPI,&cfg);
-    io->init(io);
-    W5100S_getRMSR(io, &ver);
-    ESP_LOGI(TAG,"VER: %X",ver);
 
 
     // W5500_setSHAR(io,mac);

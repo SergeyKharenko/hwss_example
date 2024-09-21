@@ -168,8 +168,6 @@ static void hwss_hso_w5500_check_state_timer_cb(void *args){
     }
 }
 
-
-
 static esp_err_t hwss_hso_w5500_init(hwss_hso_t *hso){
     esp_err_t ret=ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);

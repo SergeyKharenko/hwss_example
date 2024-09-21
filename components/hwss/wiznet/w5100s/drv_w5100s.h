@@ -167,7 +167,7 @@ inline esp_err_t W5100S_setPMRUR(hwss_io_t *io, const uint16_t *pmru){
     return io->write_buf(io,0,W5100S_REG_PMRUR,(uint8_t *)pmru,2);
 }
 
-inline esp_err_t W5100S_getPMRU(hwss_io_t *io, uint16_t *pmru){
+inline esp_err_t W5100S_getPMRUR(hwss_io_t *io, uint16_t *pmru){
     return io->read_buf(io,0,W5100S_REG_PMRUR,(uint8_t *)pmru,2);
 }
 
@@ -327,9 +327,9 @@ inline esp_err_t W5100S_setCHIPLOCK(hwss_io_t *io, bool lock){
 inline esp_err_t W5100S_setNETLOCK(hwss_io_t *io, bool lock){
     uint8_t reg=0x00;
     if(lock)
-        reg= 0x3A;
-    else
         reg= 0xC5;
+    else
+        reg= 0x3A;
     return io->write(io,0,W5100S_REG_NETLCKR,&reg);
 }
 

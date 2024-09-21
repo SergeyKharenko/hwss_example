@@ -18,6 +18,12 @@ typedef enum{
 }hwss_inter_sock_event;
 
 typedef enum{
+    HWSS_INTER_SOCKLESS_EVENT_TIMEOUT,
+    HWSS_INTER_SOCKLESS_EVENT_ARP,
+    HWSS_INTER_SOCKLESS_EVENT_PING
+}hwss_inter_sockless_event;
+
+typedef enum{
     HWSS_EVENT_CONNECTED,
     HWSS_EVENT_DISCONNECTED,
     
@@ -30,6 +36,7 @@ ESP_EVENT_DECLARE_BASE(HWSS_EVENT);
 
 ESP_EVENT_DECLARE_BASE(HWSS_INTER_NET_EVENT);
 ESP_EVENT_DECLARE_BASE(HWSS_INTER_SOCK_EVENT);
+ESP_EVENT_DECLARE_BASE(HWSS_INTER_SOCKLESS_EVENT);
 
 esp_err_t hwss_event_loop_create(void);
 esp_err_t hwss_event_loop_delete(void);
