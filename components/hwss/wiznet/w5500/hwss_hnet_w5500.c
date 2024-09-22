@@ -19,6 +19,8 @@ typedef struct{
 
     uint32_t    check_state_period_ms;
     esp_timer_handle_t check_state_timer;
+
+    bool        is_started;
 }hwss_hnet_w5500_t;
 
 static void hwss_hnet_w5500_check_state_timer_cb(void *args){
@@ -79,20 +81,32 @@ static esp_err_t hwss_hnet_w5500_init(hwss_hnet_t *hnet){
     uint8_t imr=W5500_IM_IR7|W5500_IM_IR6|W5500_IM_IR5|W5500_IM_IR4;
     ESP_GOTO_ON_ERROR(W5500_setIMR(hnet->io,&imr),err,TAG,"cannot write IMR");
 
-    ESP_GOTO_ON_ERROR(esp_timer_start_periodic(hnet_w5500->check_state_timer,hnet_w5500->check_state_period_ms*1000),
-                        err,TAG,"cannot start timer");
-
 err:
     return ret;
 }
 
 static esp_err_t hwss_hnet_w5500_deinit(hwss_hnet_t *hnet){
-    esp_err_t ret=ESP_OK;
     hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
-    ESP_GOTO_ON_ERROR(esp_timer_stop(hnet_w5500->check_state_timer),err,TAG,"cannot stop timer");
+    if(!hnet_w5500->is_started)
+        return ESP_OK;
+    hnet_w5500->is_started=false;
+    return esp_timer_stop(hnet_w5500->check_state_timer);
+}
 
-err:
-    return ret;
+static esp_err_t hwss_hnet_w5500_start(hwss_hnet_t *hnet){
+    hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
+    if(hnet_w5500->is_started)
+        return ESP_OK;
+    hnet_w5500->is_started=true;
+    return esp_timer_start_periodic(hnet_w5500->check_state_timer,hnet_w5500->check_state_period_ms*1000);
+}
+
+static esp_err_t hwss_hnet_w5500_stop(hwss_hnet_t *hnet){
+    hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
+    if(!hnet_w5500->is_started)
+        return ESP_OK;
+    hnet_w5500->is_started=false;
+    return esp_timer_stop(hnet_w5500->check_state_timer);
 }
 
 static esp_err_t hwss_hnet_w5500_set_gateway_addr(hwss_hnet_t *hnet, const hwss_ip_addr_t addr){
@@ -287,6 +301,8 @@ hwss_hnet_t *hwss_hnet_new_w5500(hwss_io_t *io, hwss_hnet_config_t *config){
     hnet->super.io=io;
     hnet->super.init=hwss_hnet_w5500_init;
     hnet->super.deinit=hwss_hnet_w5500_deinit;
+    hnet->super.start=hwss_hnet_w5500_start;
+    hnet->super.stop=hwss_hnet_w5500_stop;
     hnet->super.set_gateway_addr=hwss_hnet_w5500_set_gateway_addr;
     hnet->super.get_gateway_addr=hwss_hnet_w5500_get_gateway_addr;
     hnet->super.set_subnet_mask=hwss_hnet_w5500_set_subnet_mask;
@@ -317,6 +333,7 @@ hwss_hnet_t *hwss_hnet_new_w5500(hwss_io_t *io, hwss_hnet_config_t *config){
     hnet->ppp_cp_request_tick=(uint8_t) CP_REQ_MS2TICK(config->ppp_cp_request_time_ms);
     hnet->ppp_cp_magic_num=config->ppp_cp_magic_num;
     hnet->check_state_period_ms=config->check_state_period_ms;
+    hnet->is_started=false;
 
     esp_timer_create_args_t timer_arg={
         .name="hwss_hnet_w5500_check_state_timer",

@@ -19,6 +19,8 @@ typedef struct{
 
     uint32_t    check_state_period_ms;
     esp_timer_handle_t check_state_timer;
+
+    bool        is_started;
 }hwss_hnet_w5100s_t;
 
 static void hwss_hnet_w5100s_check_state_timer_cb(void *args){
@@ -58,25 +60,6 @@ static void hwss_hnet_w5100s_check_state_timer_cb(void *args){
             return;
         }
     }
-
-
-    uint8_t ir2;
-    if(W5100S_getIR2(hnet_w5100s->super.io,&ir2)!=ESP_OK){
-        ESP_LOGE(TAG,"cannot read IR2");
-        return;
-    }
-
-    if(ir2&W5100S_IR2_MGC){        
-        if(hwss_event_post(HWSS_INTER_NET_EVENT,HWSS_INTER_NET_EVENT_MAGIC_PACK,(void *)&hnet_w5100s->super,
-                        sizeof(hwss_hnet_t *),0)!=ESP_OK){
-            ESP_LOGE(TAG,"fail to post event");
-        }
-
-        if(W5100S_setIR2(hnet_w5100s->super.io,&ir2)!=ESP_OK){
-            ESP_LOGE(TAG,"cannot write IR2");
-            return;
-        }
-    }
 }
 
 static esp_err_t hwss_hnet_w5100s_init(hwss_hnet_t *hnet){
@@ -100,20 +83,32 @@ static esp_err_t hwss_hnet_w5100s_init(hwss_hnet_t *hnet){
     uint8_t imr2=0;
     ESP_GOTO_ON_ERROR(W5100S_setIMR2(hnet->io,&imr2),err,TAG,"cannot write IMR2");
 
-    ESP_GOTO_ON_ERROR(esp_timer_start_periodic(hnet_w5100s->check_state_timer,hnet_w5100s->check_state_period_ms*1000),
-                        err,TAG,"cannot start timer");
-
 err:
     return ret;
 }
 
 static esp_err_t hwss_hnet_w5100s_deinit(hwss_hnet_t *hnet){
-    esp_err_t ret=ESP_OK;
     hwss_hnet_w5100s_t *hnet_w5100s=__containerof(hnet,hwss_hnet_w5100s_t,super);
-    ESP_GOTO_ON_ERROR(esp_timer_stop(hnet_w5100s->check_state_timer),err,TAG,"cannot stop timer");
+    if(!hnet_w5100s->is_started)
+        return ESP_OK;
+    hnet_w5100s->is_started=false;
+    return esp_timer_stop(hnet_w5100s->check_state_timer);
+}
 
-err:
-    return ret;
+static esp_err_t hwss_hnet_w5100s_start(hwss_hnet_t *hnet){
+    hwss_hnet_w5100s_t *hnet_w5100s=__containerof(hnet,hwss_hnet_w5100s_t,super);
+    if(hnet_w5100s->is_started)
+        return ESP_OK;
+    hnet_w5100s->is_started=true;
+    return esp_timer_start_periodic(hnet_w5100s->check_state_timer,hnet_w5100s->check_state_period_ms*1000);
+}
+
+static esp_err_t hwss_hnet_w5100s_stop(hwss_hnet_t *hnet){
+    hwss_hnet_w5100s_t *hnet_w5100s=__containerof(hnet,hwss_hnet_w5100s_t,super);
+    if(!hnet_w5100s->is_started)
+        return ESP_OK;
+    hnet_w5100s->is_started=false;
+    return esp_timer_stop(hnet_w5100s->check_state_timer);
 }
 
 static esp_err_t hwss_hnet_w5100s_set_gateway_addr(hwss_hnet_t *hnet, const hwss_ip_addr_t addr){
@@ -314,6 +309,8 @@ hwss_hnet_t *hwss_hnet_new_w5100s(hwss_io_t *io, hwss_hnet_config_t *config){
     hnet->super.io=io;
     hnet->super.init=hwss_hnet_w5100s_init;
     hnet->super.deinit=hwss_hnet_w5100s_deinit;
+    hnet->super.start=hwss_hnet_w5100s_start;
+    hnet->super.stop=hwss_hnet_w5100s_stop;
     hnet->super.set_gateway_addr=hwss_hnet_w5100s_set_gateway_addr;
     hnet->super.get_gateway_addr=hwss_hnet_w5100s_get_gateway_addr;
     hnet->super.set_subnet_mask=hwss_hnet_w5100s_set_subnet_mask;
@@ -344,6 +341,7 @@ hwss_hnet_t *hwss_hnet_new_w5100s(hwss_io_t *io, hwss_hnet_config_t *config){
     hnet->ppp_cp_request_tick=(uint8_t) CP_REQ_MS2TICK(config->ppp_cp_request_time_ms);
     hnet->ppp_cp_magic_num=config->ppp_cp_magic_num;
     hnet->check_state_period_ms=config->check_state_period_ms;
+    hnet->is_started=false;
 
     esp_timer_create_args_t timer_arg={
         .name="hwss_hnet_w5100s_check_state_timer",

@@ -199,20 +199,20 @@ inline esp_err_t W5100S_setPHYRAR(hwss_io_t *io, const uint8_t *phyrar){
     return io->write(io,0,W5100S_REG_PHYRAR,phyrar);
 }
 
-inline esp_err_t W5100S_getPHYDIR(hwss_io_t *io, uint8_t *phydir){
-    return io->read(io,0,W5100S_REG_PHYDIR,phydir);
+inline esp_err_t W5100S_getPHYDIR(hwss_io_t *io, uint16_t *phydir){
+    return io->read_buf(io,0,W5100S_REG_PHYDIR,phydir,2);
 }
 
-inline esp_err_t W5100S_setPHYDIR(hwss_io_t *io, const uint8_t *phydir){
-    return io->write(io,0,W5100S_REG_PHYDIR,phydir);
+inline esp_err_t W5100S_setPHYDIR(hwss_io_t *io, const uint16_t *phydir){
+    return io->write_buf(io,0,W5100S_REG_PHYDIR,phydir,2);
 }
 
-inline esp_err_t W5100S_getPHYDOR(hwss_io_t *io, uint8_t *phydor){
-    return io->read(io,0,W5100S_REG_PHYDOR,phydor);
+inline esp_err_t W5100S_getPHYDOR(hwss_io_t *io, uint16_t *phydor){
+    return io->read_buf(io,0,W5100S_REG_PHYDOR,phydor,2);
 }
 
-inline esp_err_t W5100S_setPHYDOR(hwss_io_t *io, const uint8_t *phydor){
-    return io->write(io,0,W5100S_REG_PHYDOR,phydor);
+inline esp_err_t W5100S_setPHYDOR(hwss_io_t *io, const uint16_t *phydor){
+    return io->write_buf(io,0,W5100S_REG_PHYDOR,phydor,2);
 }
 
 inline esp_err_t W5100S_getPHYACR(hwss_io_t *io, uint8_t *phyacr){

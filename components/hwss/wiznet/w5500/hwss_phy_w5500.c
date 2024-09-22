@@ -21,6 +21,8 @@ typedef struct{
 
     uint32_t reset_timeout_ms;
     uint32_t autonego_timeout_ms;
+
+    bool is_started;
 }hwss_phy_w5500_t;
 
 typedef union {
@@ -88,7 +90,7 @@ static void hwss_phy_w5500_check_timer_cb(void *args){
     }
 }
 
-esp_err_t hwss_phy_w5500_reset(hwss_phy_t *phy){
+static esp_err_t hwss_phy_w5500_reset(hwss_phy_t *phy){
     esp_err_t ret=ESP_OK;
     hwss_phy_w5500_t *phy_w5500=__containerof(phy,hwss_phy_w5500_t,super);
     uint8_t cfg=0;
@@ -109,28 +111,38 @@ err:
     return ret;
 }
 
-esp_err_t hwss_phy_w5500_init(hwss_phy_t *phy){
-    esp_err_t ret = ESP_OK;
+static esp_err_t hwss_phy_w5500_init(hwss_phy_t *phy){
     hwss_phy_w5500_t *phy_w5500=__containerof(phy,hwss_phy_w5500_t,super);
     
     atomic_store(&(phy_w5500->link),HWSS_LINK_DOWN);
-
-    ESP_GOTO_ON_ERROR(esp_timer_start_periodic(phy_w5500->check_timer, phy_w5500->check_period_ms*1000),
-                        err,TAG,"cannot start timer");
-err:
-    return ret;
+    return ESP_OK;
 }
 
-esp_err_t hwss_phy_w5500_deinit(hwss_phy_t *phy){
-    esp_err_t ret = ESP_OK;
+static esp_err_t hwss_phy_w5500_deinit(hwss_phy_t *phy){
     hwss_phy_w5500_t *phy_w5500=__containerof(phy,hwss_phy_w5500_t,super);
-    ESP_GOTO_ON_ERROR(esp_timer_stop(phy_w5500->check_timer),err,TAG,"cannot stop timer");
-
-err:
-    return ret;
+    if(!phy_w5500->is_started)
+        return ESP_OK;
+    phy_w5500->is_started=false;
+    return esp_timer_stop(phy_w5500->check_timer);
 }
 
-esp_err_t hwss_phy_w5500_autonego_ctrl(hwss_phy_t *phy, hwss_phy_autoneg_cmd_t cmd, bool *autonego_en_stat){
+static esp_err_t hwss_phy_w5500_start(hwss_phy_t *phy){
+    hwss_phy_w5500_t *phy_w5500=__containerof(phy,hwss_phy_w5500_t,super);
+    if(phy_w5500->is_started)
+        return ESP_OK;
+    phy_w5500->is_started=true;
+    return esp_timer_start_periodic(phy_w5500->check_timer, phy_w5500->check_period_ms*1000);
+}
+
+static esp_err_t hwss_phy_w5500_stop(hwss_phy_t *phy){
+    hwss_phy_w5500_t *phy_w5500=__containerof(phy,hwss_phy_w5500_t,super);
+    if(!phy_w5500->is_started)
+        return ESP_OK;
+    phy_w5500->is_started=false;
+    return esp_timer_stop(phy_w5500->check_timer);
+}
+
+static esp_err_t hwss_phy_w5500_autonego_ctrl(hwss_phy_t *phy, hwss_phy_autoneg_cmd_t cmd, bool *autonego_en_stat){
     esp_err_t ret = ESP_OK;
     hwss_phy_w5500_t *phy_w5500=__containerof(phy,hwss_phy_w5500_t,super);
     phycfg_reg_t stat;
@@ -209,7 +221,7 @@ err:
     return ret;
 }
 
-esp_err_t hwss_phy_w5500_set_link(hwss_phy_t *phy, hwss_link_t link){
+static esp_err_t hwss_phy_w5500_set_link(hwss_phy_t *phy, hwss_link_t link){
     esp_err_t ret=ESP_OK;
     hwss_phy_w5500_t *phy_w5500=__containerof(phy,hwss_phy_w5500_t,super);
 
@@ -228,14 +240,14 @@ err:
     return ret;
 }
 
-esp_err_t hwss_phy_w5500_get_link(hwss_phy_t *phy, hwss_link_t *link){
+static esp_err_t hwss_phy_w5500_get_link(hwss_phy_t *phy, hwss_link_t *link){
     hwss_phy_w5500_t *phy_w5500=__containerof(phy,hwss_phy_w5500_t,super);
 
     *link=atomic_load(&(phy_w5500->link));
     return ESP_OK;
 }
 
-esp_err_t hwss_phy_w5500_set_speed(hwss_phy_t *phy, hwss_speed_t speed){
+static esp_err_t hwss_phy_w5500_set_speed(hwss_phy_t *phy, hwss_speed_t speed){
     esp_err_t ret = ESP_OK;
     hwss_phy_w5500_t *phy_w5500=__containerof(phy,hwss_phy_w5500_t,super);
     phycfg_reg_t stat;
@@ -269,14 +281,14 @@ err:
     return ret;
 }
 
-esp_err_t hwss_phy_w5500_get_speed(hwss_phy_t *phy, hwss_speed_t *speed){
+static esp_err_t hwss_phy_w5500_get_speed(hwss_phy_t *phy, hwss_speed_t *speed){
     hwss_phy_w5500_t *phy_w5500=__containerof(phy,hwss_phy_w5500_t,super);
 
     *speed=atomic_load(&(phy_w5500->speed));
     return ESP_OK;
 }
 
-esp_err_t hwss_phy_w5500_set_duplex(hwss_phy_t *phy, hwss_duplex_t duplex){
+static esp_err_t hwss_phy_w5500_set_duplex(hwss_phy_t *phy, hwss_duplex_t duplex){
     esp_err_t ret = ESP_OK;
     hwss_phy_w5500_t *phy_w5500=__containerof(phy,hwss_phy_w5500_t,super);
     phycfg_reg_t stat;
@@ -311,7 +323,7 @@ err:
 }
 
 
-esp_err_t hwss_phy_w5500_get_duplex(hwss_phy_t *phy, hwss_duplex_t *duplex){
+static esp_err_t hwss_phy_w5500_get_duplex(hwss_phy_t *phy, hwss_duplex_t *duplex){
     hwss_phy_w5500_t *phy_w5500=__containerof(phy,hwss_phy_w5500_t,super);
 
     *duplex=atomic_load(&(phy_w5500->duplex));
@@ -337,6 +349,8 @@ hwss_phy_t *hwss_phy_new_w5500(hwss_io_t *io, const hwss_phy_config_t *phy_confi
     phy->super.reset=hwss_phy_w5500_reset;
     phy->super.init=hwss_phy_w5500_init;
     phy->super.deinit=hwss_phy_w5500_deinit;
+    phy->super.start=hwss_phy_w5500_start;
+    phy->super.stop=hwss_phy_w5500_stop;
     phy->super.autonego_ctrl=hwss_phy_w5500_autonego_ctrl;
     phy->super.set_link=hwss_phy_w5500_set_link;
     phy->super.get_link=hwss_phy_w5500_get_link;
@@ -347,6 +361,7 @@ hwss_phy_t *hwss_phy_new_w5500(hwss_io_t *io, const hwss_phy_config_t *phy_confi
 
     phy->check_period_ms=phy_config->check_period_ms;
     phy->reset_timeout_ms=phy_config->reset_timeout_ms;
+    phy->is_started=false;
 
     esp_timer_create_args_t timer_arg={
         .name="hwss_phy_w5500_check_timer",

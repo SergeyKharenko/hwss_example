@@ -85,12 +85,14 @@ void app_main(void)
 
     
     // hwss_io_t *io=hwss_io_new_w5500(HWSS_IO_SPI,&cfg);
-    hwss_io_t *io=hwss_io_new_w5100s(HWSS_IO_SPI,&cfg);
     // hwss_phy_t *phy=hwss_phy_new_w5500(io,&pcfg);
-    hwss_phy_t *phy=hwss_phy_new_w5100s(io,&pcfg);
     // hwss_mac_t *mac=hwss_mac_new_w5500(io,&mcfg);
-    hwss_mac_t *mac=hwss_mac_new_w5100s(io,&mcfg);
     // hwss_hnet_t *hnet=hwss_hnet_new_w5500(io,&ncfg);
+
+
+    hwss_io_t *io=hwss_io_new_w5100s(HWSS_IO_SPI,&cfg);
+    hwss_phy_t *phy=hwss_phy_new_w5100s(io,&pcfg);
+    hwss_mac_t *mac=hwss_mac_new_w5100s(io,&mcfg);
     hwss_hnet_t *hnet=hwss_hnet_new_w5100s(io,&ncfg);
 
     hwss_event_loop_create();
@@ -101,6 +103,8 @@ void app_main(void)
     mac->init(mac);
     hnet->init(hnet);
     
+
+    phy->start(phy);
     // uint8_t ver=0;
     // W5500_getVERSIONR(io,&ver);
     // ESP_LOGW(TAG,"Version:%X",ver);

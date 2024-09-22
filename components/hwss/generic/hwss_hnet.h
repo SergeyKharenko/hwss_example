@@ -21,6 +21,9 @@ struct hwss_hnet_s{
     esp_err_t (*init)(hwss_hnet_t *hnet);
     esp_err_t (*deinit)(hwss_hnet_t *hnet);
 
+    esp_err_t (*start)(hwss_hnet_t *hnet);
+    esp_err_t (*stop)(hwss_hnet_t *hnet);
+
     esp_err_t (*set_gateway_addr)(hwss_hnet_t *hnet, const hwss_ip_addr_t addr);
     esp_err_t (*get_gateway_addr)(hwss_hnet_t *hnet, hwss_ip_addr_t addr);
 
