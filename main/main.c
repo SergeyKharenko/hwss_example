@@ -40,16 +40,23 @@ hwss_hnet_config_t ncfg={
     .ppp_cp_request_time_ms=1000
 };
 
+hwss_io_t *io;
+hwss_phy_t *phy;
+hwss_mac_t *mac;
+hwss_hnet_t *hnet;
+
 static void hwss_event_handler(void *arg, esp_event_base_t event_base,
                               int32_t event_id, void *event_data){
     switch (event_id)
     {
     case HWSS_EVENT_CONNECTED:
         ESP_LOGI(TAG,"CONNECTED!");
+        hnet->start(hnet);
         break;
     
     case HWSS_EVENT_DISCONNECTED:
         ESP_LOGW(TAG,"DISCONNECTED!");
+        hnet->stop(hnet);
         break;
 
     default:
@@ -90,10 +97,10 @@ void app_main(void)
     // hwss_hnet_t *hnet=hwss_hnet_new_w5500(io,&ncfg);
 
 
-    hwss_io_t *io=hwss_io_new_w5100s(HWSS_IO_SPI,&cfg);
-    hwss_phy_t *phy=hwss_phy_new_w5100s(io,&pcfg);
-    hwss_mac_t *mac=hwss_mac_new_w5100s(io,&mcfg);
-    hwss_hnet_t *hnet=hwss_hnet_new_w5100s(io,&ncfg);
+    io=hwss_io_new_w5100s(HWSS_IO_SPI,&cfg);
+    phy=hwss_phy_new_w5100s(io,&pcfg);
+    mac=hwss_mac_new_w5100s(io,&mcfg);
+    hnet=hwss_hnet_new_w5100s(io,&ncfg);
 
     hwss_event_loop_create();
     // hwss_event_handler_register(HWSS_EVENT,HWSS_EVENT_ANY_ID,hwss_event_handler,NULL);
@@ -105,6 +112,8 @@ void app_main(void)
     
 
     phy->start(phy);
+
+    hwss_event_handler_register(HWSS_EVENT,HWSS_EVENT_ANY_ID,hwss_event_handler,NULL);
     // uint8_t ver=0;
     // W5500_getVERSIONR(io,&ver);
     // ESP_LOGW(TAG,"Version:%X",ver);
@@ -120,9 +129,9 @@ void app_main(void)
     hwss_ip_addr_t gip={192,168,0,1};
     hwss_ip_addr_t mask={255,255,255,0};
 
-    // hnet->set_source_addr(hnet,ip);
-    // hnet->set_gateway_addr(hnet,gip);
-    // hnet->set_subnet_mask(hnet,mask);
+    hnet->set_source_addr(hnet,ip);
+    hnet->set_gateway_addr(hnet,gip);
+    hnet->set_subnet_mask(hnet,mask);
 
 
 

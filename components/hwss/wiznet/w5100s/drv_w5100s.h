@@ -200,19 +200,19 @@ inline esp_err_t W5100S_setPHYRAR(hwss_io_t *io, const uint8_t *phyrar){
 }
 
 inline esp_err_t W5100S_getPHYDIR(hwss_io_t *io, uint16_t *phydir){
-    return io->read_buf(io,0,W5100S_REG_PHYDIR,phydir,2);
+    return io->read_buf(io,0,W5100S_REG_PHYDIR,(uint8_t *)phydir,2);
 }
 
 inline esp_err_t W5100S_setPHYDIR(hwss_io_t *io, const uint16_t *phydir){
-    return io->write_buf(io,0,W5100S_REG_PHYDIR,phydir,2);
+    return io->write_buf(io,0,W5100S_REG_PHYDIR,(uint8_t *)phydir,2);
 }
 
 inline esp_err_t W5100S_getPHYDOR(hwss_io_t *io, uint16_t *phydor){
-    return io->read_buf(io,0,W5100S_REG_PHYDOR,phydor,2);
+    return io->read_buf(io,0,W5100S_REG_PHYDOR,(uint8_t *)phydor,2);
 }
 
 inline esp_err_t W5100S_setPHYDOR(hwss_io_t *io, const uint16_t *phydor){
-    return io->write_buf(io,0,W5100S_REG_PHYDOR,phydor,2);
+    return io->write_buf(io,0,W5100S_REG_PHYDOR,(uint8_t *)phydor,2);
 }
 
 inline esp_err_t W5100S_getPHYACR(hwss_io_t *io, uint8_t *phyacr){

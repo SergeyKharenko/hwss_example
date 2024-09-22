@@ -22,8 +22,6 @@ typedef enum{
 }hwss_hso_socksta_t;
 
 typedef struct{
-    uint32_t    sock_check_state_period_ms;
-
     uint8_t     en_sock_num;
     uint8_t     *txbuf_size_kb;
     uint8_t     *rxbuf_size_kb;
@@ -49,11 +47,14 @@ struct hwss_hso_s{
     esp_err_t (*init)(hwss_hso_t *hso);
     esp_err_t (*deinit)(hwss_hso_t *hso);
 
+    esp_err_t (*start)(hwss_hso_t *hso);
+    esp_err_t (*stop)(hwss_hso_t *hso);
+
     esp_err_t (*set_sock_proto)(hwss_hso_t *hso, hwss_sockid_t id, const hwss_proto_t *proto);
     esp_err_t (*get_sock_proto)(hwss_hso_t *hso, hwss_sockid_t id, hwss_proto_t *proto);
 
-    esp_err_t (*set_sockmode_opt)(hwss_hso_t *hso, hwss_sockid_t id, const uint8_t *opt);
-    esp_err_t (*get_sockmode_opt)(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *opt);
+    esp_err_t (*set_sockmode_opt)(hwss_hso_t *hso, hwss_sockid_t id, const void *opt);
+    esp_err_t (*get_sockmode_opt)(hwss_hso_t *hso, hwss_sockid_t id, void *opt);
 
     esp_err_t (*set_sock_source_port)(hwss_hso_t *hso, hwss_sockid_t id, const hwss_port_t *port);
     esp_err_t (*get_sock_source_port)(hwss_hso_t *hso, hwss_sockid_t id, hwss_port_t *port);

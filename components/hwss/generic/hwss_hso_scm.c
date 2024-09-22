@@ -145,17 +145,9 @@ static void hwss_hso_scm_sockact_timer_cb(void *args){
     }
 }
 
-esp_err_t hwss_hso_scm_init(hwss_hso_scm_t *hso_scm){
+static esp_err_t hwss_hso_scm_init(hwss_hso_scm_t *hso_scm){
     esp_err_t ret=ESP_OK;
     if(hso_scm->irq_gpio_num>=0){
-        ESP_GOTO_ON_ERROR(hso_scm->drv.set_sock_global_intr_enable_all(hso_scm,false),err,TAG,"fail to disable global socket intr");
-        for(hwss_sockid_t id=0;id<hso_scm->en_sock_num;id++){
-            hso_scm->sockact_sta_list[id]=HWSS_HSO_SOCKACT_IDLE;
-            ESP_GOTO_ON_ERROR(hso_scm->drv.clear_sock_intr(hso_scm,id),err,TAG,"cannot clear sock%u intr",id);
-            ESP_GOTO_ON_ERROR(hso_scm->drv.set_sock_intr_enable(hso_scm,id,true),err,TAG,"cannot enable sock%u intr",id);
-        };
-        hso_scm->active_sock_num=0;
-
         BaseType_t xReturned = xTaskCreatePinnedToCore(hwss_hso_scm_irq_handler_task, "hso_scm_irq_handle_tsk", 
                                 hso_scm->irq_task_stack_size, hso_scm, hso_scm->irq_task_prio, &hso_scm->irq_handler, tskNO_AFFINITY);
         ESP_GOTO_ON_FALSE(xReturned == pdPASS, ESP_FAIL, err, TAG,"cannot create hso_w5500 recv task");
@@ -166,8 +158,44 @@ esp_err_t hwss_hso_scm_init(hwss_hso_scm_t *hso_scm){
             .pull_up_en=1,
             .intr_type=GPIO_INTR_NEGEDGE,
         };
-
         ESP_GOTO_ON_ERROR(gpio_config(&io_cfg),err,TAG,"cannot setup irq pin");
+    }
+
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hso_scm_deinit(hwss_hso_scm_t *hso_scm){
+    esp_err_t ret=ESP_OK;
+    if(hso_scm->is_started){
+        ESP_GOTO_ON_ERROR(hso_scm->stop(hso_scm),err,TAG,"cannot stop hso_scm");
+        hso_scm->is_started=false;
+    }
+
+    if(hso_scm->irq_gpio_num>=0){
+        ESP_GOTO_ON_ERROR(gpio_reset_pin(hso_scm->irq_gpio_num),err,TAG,"cannot reset irq pin");
+        vTaskDelete(hso_scm->irq_handler);
+    }
+
+err:
+    return ret;    
+}
+
+static esp_err_t hwss_hso_scm_start(hwss_hso_scm_t *hso_scm){
+    esp_err_t ret=ESP_OK;
+
+    if(hso_scm->is_started)
+        return ret;
+    
+    if(hso_scm->irq_gpio_num>=0){
+        ESP_GOTO_ON_ERROR(hso_scm->drv.set_sock_global_intr_enable_all(hso_scm,false),err,TAG,"fail to disable global socket intr");
+        for(hwss_sockid_t id=0;id<hso_scm->en_sock_num;id++){
+            hso_scm->sockact_sta_list[id]=HWSS_HSO_SOCKACT_IDLE;
+            ESP_GOTO_ON_ERROR(hso_scm->drv.clear_sock_intr(hso_scm,id),err,TAG,"cannot clear sock%u intr",id);
+            ESP_GOTO_ON_ERROR(hso_scm->drv.set_sock_intr_enable(hso_scm,id,true),err,TAG,"cannot enable sock%u intr",id);
+        };
+        hso_scm->active_sock_num=0;
+
         ESP_GOTO_ON_ERROR(gpio_intr_enable(hso_scm->irq_gpio_num),err,TAG,"cannot enable irq");
         ESP_GOTO_ON_ERROR(gpio_isr_handler_add(hso_scm->irq_gpio_num,hwss_hso_scm_isr_handler,(void *)hso_scm),
                         err,TAG,"cannot enable irq");
@@ -183,33 +211,32 @@ esp_err_t hwss_hso_scm_init(hwss_hso_scm_t *hso_scm){
 
         ESP_GOTO_ON_ERROR(esp_timer_start_periodic(hso_scm->sock_polling_timer,hso_scm->sock_polling_period_ms*1000),err,TAG,
                             "cannot start sock polling timer");
-
     }
-
+    hso_scm->is_started=true;
 err:
     return ret;
 }
 
-esp_err_t hwss_hso_scm_deinit(hwss_hso_scm_t *hso_scm){
+static esp_err_t hwss_hso_scm_stop(hwss_hso_scm_t *hso_scm){
     esp_err_t ret=ESP_OK;
+    if(!hso_scm->is_started)
+        return ret;
+
     if(hso_scm->irq_gpio_num>=0){
         ESP_GOTO_ON_ERROR(gpio_isr_handler_remove(hso_scm->irq_gpio_num),err,TAG,"cannot disable irq");
         ESP_GOTO_ON_ERROR(gpio_intr_disable(hso_scm->irq_gpio_num),err,TAG,"cannot disable irq");
-        ESP_GOTO_ON_ERROR(gpio_reset_pin(hso_scm->irq_gpio_num),err,TAG,"cannot reset irq pin");
 
         if(esp_timer_is_active(hso_scm->sock_polling_timer))
             ESP_GOTO_ON_ERROR(esp_timer_stop(hso_scm->sock_polling_timer),err,TAG,"fail to stop sock polling timer");
-        
-        vTaskDelete(hso_scm->irq_handler);
     }
     else
         ESP_GOTO_ON_ERROR(esp_timer_stop(hso_scm->sock_polling_timer),err,TAG,"fail to stop sock polling timer");
-
+    hso_scm->is_started=false;
 err:
-    return ret;    
+    return ret;
 }
 
-esp_err_t hwss_hso_scm_set_sock_state(hwss_hso_scm_t *hso_scm, hwss_sockid_t id, const hwss_hso_sockact_sta_t *state){
+static esp_err_t hwss_hso_scm_set_sock_state(hwss_hso_scm_t *hso_scm, hwss_sockid_t id, const hwss_hso_sockact_sta_t *state){
     esp_err_t ret=ESP_OK;
     
     if(hso_scm->irq_gpio_num<0 || *state==HWSS_HSO_SOCKACT_GENERIC)
@@ -245,7 +272,7 @@ err:
     return ret;    
 }
 
-esp_err_t hwss_hso_scm_get_sock_state(hwss_hso_scm_t *hso_scm, hwss_sockid_t id, hwss_hso_sockact_sta_t *state){
+static esp_err_t hwss_hso_scm_get_sock_state(hwss_hso_scm_t *hso_scm, hwss_sockid_t id, hwss_hso_sockact_sta_t *state){
     *state=hso_scm->sockact_sta_list[id];
     return ESP_OK;
 }
@@ -267,6 +294,14 @@ hwss_hso_scm_t *hwss_hso_scm_new(hwss_hso_t *hso, const hwss_hso_scm_config_t *c
     ret->sock_active_threshold_ms=config->sock_active_threshold_ms;
 
     ret->irq_gpio_num=config->irq_gpio_num;
+    ret->is_started=false;
+
+    ret->init=hwss_hso_scm_init;
+    ret->deinit=hwss_hso_scm_deinit;
+    ret->start=hwss_hso_scm_start;
+    ret->stop=hwss_hso_scm_stop;
+    ret->set_sock_state=hwss_hso_scm_set_sock_state;
+    ret->get_sock_state=hwss_hso_scm_get_sock_state;
 
     if(ret->irq_gpio_num>=0){
         ret->socktimer_list=calloc(config->sock_total_num,sizeof(esp_timer_handle_t));

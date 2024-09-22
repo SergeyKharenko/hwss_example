@@ -18,6 +18,9 @@ struct hwss_hsl_s{
     esp_err_t (*init)(hwss_hsl_t *hsl);
     esp_err_t (*deinit)(hwss_hsl_t *hsl);
 
+    esp_err_t (*start)(hwss_hsl_t *hsl);
+    esp_err_t (*stop)(hwss_hsl_t *hsl);
+
     esp_err_t (*set_peer_addr)(hwss_hsl_t *hsl, const hwss_ip_addr_t addr);
     esp_err_t (*get_peer_addr)(hwss_hsl_t *hsl, hwss_ip_addr_t addr);
 

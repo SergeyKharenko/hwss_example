@@ -248,31 +248,30 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_set_sockmode_opt(hwss_hso_t *hso, hwss_sockid_t id, const uint8_t *opt){
+static esp_err_t hwss_hso_w5500_set_sockmode_opt(hwss_hso_t *hso, hwss_sockid_t id, const void *opt){
     esp_err_t ret= ESP_OK;
 
     sn_mr_reg_t snmr;
     ESP_GOTO_ON_ERROR(getSn_MR(hso->io,id,&(snmr.val)),err,TAG,"cannot read Sn_MR");
 
-    hwss_hso_wiznet_sockmode_opt_t wiznet_opt;
-    wiznet_opt.val=*opt;
+    hwss_hso_wiznet_sockmode_opt_t *wiznet_opt=(hwss_hso_wiznet_sockmode_opt_t *)opt;
 
-    if(wiznet_opt.multicast)
+    if(wiznet_opt->multicast||wiznet_opt->mac_filter)
         snmr.multi_mfen=0x01;
     else
         snmr.multi_mfen=0x00;
 
-    if(wiznet_opt.broadcast_block)
+    if(wiznet_opt->broadcast_block)
         snmr.bcastb=0x01;
     else
         snmr.bcastb=0x00;
 
-    if(wiznet_opt.nodelay_ack)
+    if(wiznet_opt->nodelay_ack||wiznet_opt->multicast||wiznet_opt->multicast_block)
         snmr.nd_mc_mmb=0x01;
     else
         snmr.nd_mc_mmb=0x00;
 
-    if(wiznet_opt.unicast_block)
+    if(wiznet_opt->unicast_block||wiznet_opt->ipv6_block)
         snmr.unicastb_mip6b=0x01;
     else
         snmr.unicastb_mip6b=0x00;
@@ -282,25 +281,34 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_get_sockmode_opt(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *opt){
+static esp_err_t hwss_hso_w5500_get_sockmode_opt(hwss_hso_t *hso, hwss_sockid_t id, void *opt){
     esp_err_t ret= ESP_OK;
 
     sn_mr_reg_t snmr;
     ESP_GOTO_ON_ERROR(getSn_MR(hso->io,id,&(snmr.val)),err,TAG,"cannot read Sn_MR");
 
-    hwss_hso_wiznet_sockmode_opt_t wiznet_opt;
-    wiznet_opt.val=0;
+    hwss_hso_wiznet_sockmode_opt_t *wiznet_opt=(hwss_hso_wiznet_sockmode_opt_t *)opt;
+    memset(wiznet_opt,0,sizeof(hwss_hso_wiznet_sockmode_opt_t));
 
-    if(snmr.multi_mfen)
-        wiznet_opt.multicast=0x01;
+    if(snmr.multi_mfen){
+        wiznet_opt->multicast=true;
+        wiznet_opt->mac_filter=true;
+    }
+
     if(snmr.bcastb)
-        wiznet_opt.broadcast_block=0x01;
-    if(snmr.nd_mc_mmb)
-        wiznet_opt.nodelay_ack=0x01;
-    if(snmr.unicastb_mip6b)
-        wiznet_opt.unicast_block=0x01;
+        wiznet_opt->broadcast_block=true;
 
-    *opt=wiznet_opt.val;
+    if(snmr.nd_mc_mmb){
+        wiznet_opt->nodelay_ack=true;
+        wiznet_opt->multicast=true;
+        wiznet_opt->multicast_block=true;
+    }
+
+    if(snmr.unicastb_mip6b){
+        wiznet_opt->unicast_block=true;
+        wiznet_opt->ipv6_block=true;
+    }
+
 err:
     return ret;    
 }
@@ -464,7 +472,7 @@ hwss_hso_t *hwss_hso_new_w5500(hwss_io_t *io, const hwss_hso_config_t *config){
     if(config->irq_inter_time_us==0)
         hso->irq_inter_tick=0;
     else
-        hso->irq_inter_tick=config->irq_inter_time_us*50/4-1;
+        hso->irq_inter_tick=config->irq_inter_time_us*150/4-1;
     memcpy(hso->txbuf_size_kb,config->txbuf_size_kb,hso->en_sock_num);
     memcpy(hso->rxbuf_size_kb,config->rxbuf_size_kb,hso->en_sock_num);
     hso->sock_check_state_period_ms=config->sock_check_state_period_ms;

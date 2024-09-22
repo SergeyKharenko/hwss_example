@@ -2,28 +2,25 @@
 
 #include "hwss_hso.h"
 
-typedef union{
-    struct{
-        union{
-            uint8_t multicast :1;
-            uint8_t mac_filter :1;
-        };
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-        uint8_t broadcast_block :1;
-        
-        union{
-            uint8_t nodelay_ack :1;
-            uint8_t multicast :1;
-            uint8_t multicast_block :1;
-        };
-
-        union{
-            uint8_t unicast_block :1;
-            uint8_t ipv6_block :1;
-        };
-    };
-
-    uint8_t val;
+typedef struct{
+    bool macraw_mac_filter;
+    bool macraw_broadcast_block;
+    bool macraw_multicast_block;
+    bool macraw_ipv6_block;
+    bool udp_multicast;
+    bool udp_broadcast_block;
+    bool udp_unicast_block;
+    bool tcp_force_psh;
+    bool nodelay_ack;
+    bool igmp_v2;
 }hwss_hso_wiznet_sockmode_opt_t;
 
 hwss_hso_t *hwss_hso_new_w5500(hwss_io_t *io, const hwss_hso_config_t *config);
+
+#ifdef __cplusplus
+}
+#endif

@@ -49,6 +49,3 @@ typedef struct{
     uart_port_t         port;
     uart_config_t       uart_cfg;
 }hwss_io_uart_config_t;
-
-
-

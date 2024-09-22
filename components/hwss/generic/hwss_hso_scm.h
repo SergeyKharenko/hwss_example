@@ -50,8 +50,13 @@ struct hwss_hso_scm_s{
 
     TaskHandle_t            irq_handler;
 
+    bool        is_started;
+
     esp_err_t (*init)(hwss_hso_scm_t *hso_scm);
     esp_err_t (*deinit)(hwss_hso_scm_t *hso_scm);
+
+    esp_err_t (*start)(hwss_hso_scm_t *hso_scm);
+    esp_err_t (*stop)(hwss_hso_scm_t *hso_scm);
 
     esp_err_t (*set_sock_state)(hwss_hso_scm_t *hso_scm, hwss_sockid_t id, const hwss_hso_sockact_sta_t *state);
     esp_err_t (*get_sock_state)(hwss_hso_scm_t *hso_scm, hwss_sockid_t id, hwss_hso_sockact_sta_t *state);

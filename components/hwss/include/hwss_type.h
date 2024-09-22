@@ -1,4 +1,5 @@
 #pragma once
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -26,6 +27,11 @@ inline bool hwss_io_type_supported(const hwss_io_types_t list, hwss_io_type_t ty
     }
     return false;
 }
+
+typedef enum{
+    HWSS_TRIGGER_POSEDGE,
+    HWSS_TRIGGER_NEGEDGE
+}hwss_trigger_t;
 
 typedef enum {
     HWSS_PHY_AUTONEGO_RESTART,
@@ -70,3 +76,37 @@ typedef uint8_t                 hwss_sockid_t;
 typedef uint16_t                hwss_port_t;
 
 
+inline bool hwss_same_option_check(uint8_t num, bool opt,...){
+    if(num<2)
+        return true;
+    
+    bool cal_res=opt;
+    bool arg;
+    bool res=true;
+
+    va_list args;
+    va_start(args,opt);
+
+    if(opt){
+        while(num--){
+            arg=va_arg(args,bool);
+            cal_res=cal_res&&arg;
+            if(!cal_res){
+                res=false;
+                break;
+            }
+        }
+    }
+    else{
+        while(num--){
+            arg=va_arg(args,bool);
+            cal_res=cal_res||opt;
+            if(cal_res){
+                res=false;
+                break;
+            }
+        }
+    }
+    va_end(args);
+    return res;
+}
