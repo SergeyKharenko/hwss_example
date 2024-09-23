@@ -15,6 +15,8 @@ typedef struct{
 
     uint32_t    check_state_period_ms;
     esp_timer_handle_t check_state_timer;
+
+    bool        is_started;
 }hwss_hsl_w5100_t;
 
 static void hwss_hsl_w5100s_check_state_timer_cb(void *args){
@@ -68,8 +70,7 @@ static esp_err_t hwss_hsl_w5100s_init(hwss_hsl_t *hsl){
     slimr=0x00;
     ESP_GOTO_ON_ERROR(W5100S_setSLIMR(hsl->io,&slimr),err,TAG,"cannot write SLIMR");
 
-    ESP_GOTO_ON_ERROR(esp_timer_start_periodic(hsl_w5100s->check_state_timer,hsl_w5100s->check_state_period_ms*1000),
-                        err,TAG,"cannot start timer");
+
 
 err:
     return ret;
@@ -78,8 +79,36 @@ err:
 static esp_err_t hwss_hsl_w5100s_deinit(hwss_hsl_t *hsl){
     esp_err_t ret=ESP_OK;
     hwss_hsl_w5100_t* hsl_w5100s=__containerof(hsl,hwss_hsl_w5100_t,super);
-    ESP_GOTO_ON_ERROR(esp_timer_stop(hsl_w5100s->check_state_timer),err,TAG,"cannot stop timer");
+    if(hsl_w5100s->is_started)
+        ESP_GOTO_ON_ERROR(hsl->stop(hsl),err,TAG,"cannot stop hsl");
 
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hsl_w5100s_start(hwss_hsl_t *hsl){
+    esp_err_t ret=ESP_OK;
+    hwss_hsl_w5100_t* hsl_w5100s=__containerof(hsl,hwss_hsl_w5100_t,super);
+
+    if(hsl_w5100s->is_started)
+        return ret;
+    
+    ESP_GOTO_ON_ERROR(esp_timer_start_periodic(hsl_w5100s->check_state_timer,hsl_w5100s->check_state_period_ms*1000),
+                        err,TAG,"cannot start timer");
+    hsl_w5100s->is_started=true;
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hsl_w5100s_stop(hwss_hsl_t *hsl){
+    esp_err_t ret=ESP_OK;
+    hwss_hsl_w5100_t* hsl_w5100s=__containerof(hsl,hwss_hsl_w5100_t,super);
+
+    if(!hsl_w5100s->is_started)
+        return ret;
+
+    ESP_GOTO_ON_ERROR(esp_timer_stop(hsl_w5100s->check_state_timer),err,TAG,"cannot stop timer");
+    hsl_w5100s->is_started=false;
 err:
     return ret;
 }
@@ -165,6 +194,8 @@ hwss_hsl_t *hwss_hsl_new_w5100s(esp_event_loop_handle_t elp_hdl, hwss_io_t *io, 
     hsl->super.elp_hdl=elp_hdl;
     hsl->super.init=hwss_hsl_w5100s_init;
     hsl->super.deinit=hwss_hsl_w5100s_deinit;
+    hsl->super.start=hwss_hsl_w5100s_start;
+    hsl->super.stop=hwss_hsl_w5100s_stop;
     hsl->super.set_peer_addr=hwss_hsl_w5100s_set_peer_addr;
     hsl->super.get_peer_addr=hwss_hsl_w5100s_get_peer_addr;
     hsl->super.get_peer_mac_addr=hwss_hsl_w5100s_get_peer_mac_addr;
@@ -178,6 +209,7 @@ hwss_hsl_t *hwss_hsl_new_w5100s(esp_event_loop_handle_t elp_hdl, hwss_io_t *io, 
     hsl->retry_time_tick=config->retry_time_ms*10;
     hsl->retry_cnt=config->retry_cnt;
     hsl->check_state_period_ms=config->check_state_period_ms;
+    hsl->is_started=false;
 
     esp_timer_create_args_t timer_arg={
         .name="hwss_hsl_w5500_check_state_timer",

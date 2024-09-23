@@ -21,6 +21,18 @@ typedef enum{
     HWSS_HSO_SOCK_CUSTOM_STATE
 }hwss_hso_socksta_t;
 
+typedef enum{
+    HWSS_HSO_SOCKCTRL_OPEN,
+    HWSS_HSO_SOCKCTRL_LISTEN,
+    HWSS_HSO_SOCKCTRL_CONNECT,
+    HWSS_HSO_SOCKCTRL_DISCONN,
+    HWSS_HSO_SOCKCTRL_CLOSE,
+    HWSS_HSO_SOCKCTRL_SEND,
+    HWSS_HSO_SOCKCTRL_SENDMAC,
+    HWSS_HSO_SOCKCTRL_SENDKEEP,
+    HWSS_HSO_SOCKCTRL_RECV
+}hwss_hso_sockctrl_t;
+
 typedef struct{
     uint8_t     en_sock_num;
     uint8_t     *txbuf_size_kb;
@@ -44,6 +56,12 @@ struct hwss_hso_s{
 
     esp_err_t (*start)(hwss_hso_t *hso);
     esp_err_t (*stop)(hwss_hso_t *hso);
+
+    esp_err_t (*ctrl_sock)(hwss_hso_t *hso, hwss_sockid_t id, hwss_hso_sockctrl_t ctrl);
+
+    esp_err_t (*write_tx_buffer)(hwss_hso_t *hso, hwss_sockid_t id, const uint8_t *data, uint16_t len);
+    esp_err_t (*read_rx_buffer)(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *data, uint16_t len);
+    esp_err_t (*get_rx_length)(hwss_hso_t *hso, hwss_sockid_t id, uint16_t *len);
 
     esp_err_t (*set_sock_proto)(hwss_hso_t *hso, hwss_sockid_t id, const hwss_proto_t *proto);
     esp_err_t (*get_sock_proto)(hwss_hso_t *hso, hwss_sockid_t id, hwss_proto_t *proto);
@@ -71,6 +89,8 @@ struct hwss_hso_s{
 
     esp_err_t (*get_sock_state)(hwss_hso_t *hso, hwss_sockid_t id, hwss_hso_socksta_t *sta);
     esp_err_t (*get_sock_state_raw)(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *sta);
+
+
 };
 
 typedef struct{

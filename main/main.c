@@ -6,6 +6,7 @@
 #include "hwss_mac_wiznet.h"
 #include "hwss_phy_wiznet.h"
 #include "hwss_io_wiznet.h"
+#include "hwss_hsl_wiznet.h"
 #include "hwss_event.h"
 #include "driver/gpio.h"
 #include "drv_w5500.h"
@@ -15,12 +16,10 @@
 
 static const char *TAG="main";
 
-
-
 hwss_io_spi_config_t cfg={
     .spi_host_id=SPI2_HOST,
     .cs_io_num=10,
-    .speed_khz=10*1000
+    .speed_khz=20*1000
 };
 
 hwss_phy_config_t pcfg={
@@ -41,12 +40,21 @@ hwss_hnet_config_t ncfg={
     .ppp_cp_request_time_ms=1000
 };
 
+hwss_hsl_config_t lcfg={
+    .retry_cnt=0,
+    .retry_time_ms=100,
+    .check_state_period_ms=10
+};
+
 hwss_io_t *io;
 hwss_hir_t *hir;
 hwss_phy_t *phy;
 hwss_mac_t *mac;
 hwss_hnet_t *hnet;
 hwss_hso_t *hso;
+hwss_hsl_t *hsl;
+
+hwss_mac_addr_t dest_mac;
 
 static void hwss_event_handler(void *arg, esp_event_base_t event_base,
                               int32_t event_id, void *event_data){
@@ -64,7 +72,15 @@ static void hwss_event_handler(void *arg, esp_event_base_t event_base,
         hso->stop(hso);
         break;
 
-
+    case HWSS_INTER_EVENT_HSL_PING:
+        hsl->get_peer_mac_addr(hsl,dest_mac);
+        ESP_LOGI(TAG,"MAC: %X:%X:%X:%X:%X:%X",dest_mac[0],dest_mac[1],dest_mac[2],
+                    dest_mac[3],dest_mac[4],dest_mac[5]);
+        break;
+    
+    case HWSS_INTER_EVENT_HSL_TIMEOUT:
+        ESP_LOGW(TAG,"PING FAIL!");
+        break;
 
     default:
         ESP_LOGE(TAG,"CCC");
@@ -103,7 +119,7 @@ void app_main(void)
         .tri=HWSS_TRIGGER_NEGEDGE
     };
 
-    static uint8_t sz_cfg[]={2,2,2,2,2,2,2,2};
+    static uint8_t sz_cfg[]={2,2,2,2};
 
     hwss_hso_config_t scfg={
         .en_sock_num=4,
@@ -130,19 +146,20 @@ void app_main(void)
     esp_event_loop_handle_t hdl;
     esp_event_loop_create(&largs,&hdl);
     
-    // io=hwss_io_new_w5100s(HWSS_IO_SPI,&cfg);
-    // hir=hwss_hir_new(hdl,&ircfg);
-    // phy=hwss_phy_new_w5100s(hdl,io,&pcfg);
-    // mac=hwss_mac_new_w5100s(io,&mcfg);
-    // hnet=hwss_hnet_new_w5100s(hdl,io,&ncfg);
-    // hso=hwss_hso_new_w5100s(hdl,io,hir,&scfg);
-
-    io=hwss_io_new_w5500(HWSS_IO_SPI,&cfg);
+    io=hwss_io_new_w5100s(HWSS_IO_SPI,&cfg);
     hir=hwss_hir_new(hdl,&ircfg);
-    phy=hwss_phy_new_w5500(hdl,io,&pcfg);
-    mac=hwss_mac_new_w5500(io,&mcfg);
-    hnet=hwss_hnet_new_w5500(hdl,io,&ncfg);
-    hso=hwss_hso_new_w5500(hdl,io,hir,&scfg);
+    phy=hwss_phy_new_w5100s(hdl,io,&pcfg);
+    mac=hwss_mac_new_w5100s(io,&mcfg);
+    hnet=hwss_hnet_new_w5100s(hdl,io,&ncfg);
+    hso=hwss_hso_new_w5100s(hdl,io,hir,&scfg);
+    hsl=hwss_hsl_new_w5100s(hdl,io,&lcfg);
+
+    // io=hwss_io_new_w5500(HWSS_IO_SPI,&cfg);
+    // hir=hwss_hir_new(hdl,&ircfg);
+    // phy=hwss_phy_new_w5500(hdl,io,&pcfg);
+    // mac=hwss_mac_new_w5500(io,&mcfg);
+    // hnet=hwss_hnet_new_w5500(hdl,io,&ncfg);
+    // hso=hwss_hso_new_w5500(hdl,io,hir,&scfg);
 
     esp_event_handler_register_with(hdl,HWSS_INTER_EVENT,HWSS_EVENT_ANY_ID,hwss_event_handler,NULL);
 
@@ -151,8 +168,10 @@ void app_main(void)
     mac->init(mac);
     hnet->init(hnet);
     hso->init(hso);
+    hsl->init(hsl);
     
     phy->start(phy);
+    // hsl->start(hsl);
 
     // uint8_t ver=0;
     // W5500_getVERSIONR(io,&ver);
@@ -175,6 +194,14 @@ void app_main(void)
 
     hwss_proto_t pro=HWSS_PROTO_UDP;
     hso->set_sock_proto(hso,0,&pro);
+    hso->ctrl_sock(hso,0,HWSS_HSO_SOCKCTRL_OPEN);
+
+    // hwss_ip_addr_t pip={192,168,0,24};
+    // uint16_t pid=0;
+    // uint16_t pseq=0;
+    // hsl->set_peer_addr(hsl,pip);
+    // hsl->set_ping_id(hsl,&pid);
+    // hsl->set_ping_seqnum(hsl,&pseq);
 
     // W5500_setSHAR(io,mac);
 
@@ -183,7 +210,7 @@ void app_main(void)
     // ESP_LOGI(TAG,"MAC: %X:%X:%X:%X:%X:%X",mac_res[0],mac_res[1],mac_res[2],mac_res[3],mac_res[4],mac_res[5]);
     // uint8_t phy_sta;
     while(1){
-
-
+        // hsl->send_ping(hsl); 
+        // vTaskDelay(pdMS_TO_TICKS(2000));
     }
 }

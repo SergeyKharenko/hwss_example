@@ -234,6 +234,54 @@ err:
     return ret;
 }
 
+static esp_err_t hwss_hso_w5100s_ctrl_sock(hwss_hso_t *hso, hwss_sockid_t id, hwss_hso_sockctrl_t ctrl){
+    esp_err_t ret=ESP_OK;
+    hwss_hso_w5100s_t *hso_w5100s=__containerof(hso,hwss_hso_w5100s_t,super);
+    uint8_t sncr=0;
+
+    while(1){
+        ESP_GOTO_ON_ERROR(W5100S_getSn_CR(hso->io,id,&sncr),err,TAG,"cannot read Sn_CR");
+        if(sncr!=0)
+            continue;
+        else
+            break;
+    }
+
+    switch (ctrl)
+    {
+    case HWSS_HSO_SOCKCTRL_OPEN: sncr|=W5100S_Sn_CR_OPEN; break;
+    case HWSS_HSO_SOCKCTRL_LISTEN: sncr|=W5100S_Sn_CR_LISTEN; break;
+    case HWSS_HSO_SOCKCTRL_CONNECT: sncr|=W5100S_Sn_CR_CONNECT; break;
+    case HWSS_HSO_SOCKCTRL_DISCONN: sncr|=W5100S_Sn_CR_DISCON; break;
+    case HWSS_HSO_SOCKCTRL_CLOSE: sncr|=W5100S_Sn_CR_CLOSE; break;
+    case HWSS_HSO_SOCKCTRL_SEND: sncr|=W5100S_Sn_CR_SEND; break;
+    case HWSS_HSO_SOCKCTRL_SENDMAC: sncr|=W5100S_Sn_CR_SEND_MAC; break;
+    case HWSS_HSO_SOCKCTRL_SENDKEEP: sncr|=W5100S_Sn_CR_SEND_KEEP; break;
+    case HWSS_HSO_SOCKCTRL_RECV: sncr|=W5100S_Sn_CR_RECV; break;
+    default:
+        ret=ESP_ERR_NOT_SUPPORTED;
+        goto err;
+    }
+
+    ESP_GOTO_ON_ERROR(W5100S_setSn_CR(hso->io,id,&sncr),err,TAG,"cannot write Sn_CR");
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hso_w5100s_write_tx_buffer(hwss_hso_t *hso, hwss_sockid_t id, const uint8_t *data, uint16_t len){
+    esp_err_t ret=ESP_OK;
+    hwss_hso_w5100s_t *hso_w5100s=__containerof(hso,hwss_hso_w5100s_t,super);
+    uint16_t ptr=0;
+    
+    ESP_GOTO_ON_ERROR(W5100S_getSn_TX_WR(hso->io,id,&ptr),err,TAG,"cannot get tx pointer");
+    
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hso_w5100s_read_rx_buffer(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *data, uint16_t len);
+static esp_err_t hwss_hso_w5100s_get_rx_length(hwss_hso_t *hso, hwss_sockid_t id, uint16_t *len);
+
 static esp_err_t hwss_hso_w5100s_set_sock_proto(hwss_hso_t *hso, hwss_sockid_t id, const hwss_proto_t *proto){
     esp_err_t ret=ESP_OK;
     
@@ -519,6 +567,7 @@ hwss_hso_t *hwss_hso_new_w5100s(esp_event_loop_handle_t elp, hwss_io_t *io, hwss
     hso->super.deinit=hwss_hso_w5100s_deinit;
     hso->super.start=hwss_hso_w5100s_start;
     hso->super.stop=hwss_hso_w5100s_stop;
+    hso->super.ctrl_sock=hwss_hso_w5100s_ctrl_sock;
     hso->super.set_sock_proto=hwss_hso_w5100s_set_sock_proto;
     hso->super.get_sock_proto=hwss_hso_w5100s_get_sock_proto;
     hso->super.set_sockmode_opt=hwss_hso_w5100s_set_sockmode_opt;
