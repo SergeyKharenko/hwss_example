@@ -6,8 +6,8 @@
 extern "C" {
 #endif
 
-hwss_phy_t *hwss_phy_new_w5500(hwss_io_t *io, const hwss_phy_config_t *phy_config);
-hwss_phy_t *hwss_phy_new_w5100s(hwss_io_t *io, const hwss_phy_config_t *phy_config);
+hwss_phy_t *hwss_phy_new_w5500(esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_phy_config_t *phy_config);
+hwss_phy_t *hwss_phy_new_w5100s(esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_phy_config_t *phy_config);
 
 #ifdef __cplusplus
 }

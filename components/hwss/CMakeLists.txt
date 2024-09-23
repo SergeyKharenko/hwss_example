@@ -1,12 +1,12 @@
-set(srcs "hwss_event.c" "generic/hwss_hso_scm.c")
+set(srcs "hwss_event.c" "generic/hwss_hso_scm.c" "generic/hwss_hir.c")
 set(inc_dirs "include" "generic")
 
 list(APPEND srcs 
                 "wiznet/w5500/hwss_hnet_w5500.c"
-                # "wiznet/w5500/hwss_hso_w5500.c"
                 "wiznet/w5500/hwss_io_w5500.c"
                 "wiznet/w5500/hwss_mac_w5500.c"
                 "wiznet/w5500/hwss_phy_w5500.c"
+                "wiznet/w5500/hwss_hso_w5500.c"
 
                 "wiznet/w5100s/hwss_io_w5100s.c"
                 "wiznet/w5100s/hwss_phy_w5100s.c"

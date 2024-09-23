@@ -1,23 +1,22 @@
 #pragma once
+#include "esp_event.h"
 #include "driver/gpio.h"
 #include "hwss_type.h"
-
-typedef struct hwss_hir_s hwss_hir_t;
 
 typedef struct{
     gpio_num_t      io_num;
     hwss_trigger_t  tri;
 }hwss_hir_config_t;
 
+typedef struct hwss_hir_s hwss_hir_t;
 
 struct hwss_hir_s{
-    gpio_num_t      io_num;
-    hwss_trigger_t  tri;
+    gpio_num_t              io_num;
+    hwss_trigger_t          tri;
 
-    void            (*handler)(void *);
-    void            *args;
+    esp_event_loop_handle_t elp_hdl;
 
-    bool            is_started;
+    bool                    is_started;
 
     esp_err_t (*init)(hwss_hir_t *hir);
     esp_err_t (*deinit)(hwss_hir_t *hir);
@@ -25,7 +24,8 @@ struct hwss_hir_s{
     esp_err_t (*start)(hwss_hir_t *hir);
     esp_err_t (*stop)(hwss_hir_t *hir);
 
-    esp_err_t (*setIRQ_handler)(hwss_hir_t *hir, void (*handler)(void *), void *args);
+    esp_err_t (*register_handler)(hwss_hir_t *hir, esp_event_handler_t handler, void *args);
+    esp_err_t (*unregister_handler)(hwss_hir_t *hir, esp_event_handler_t handler);
 };
 
-hwss_hir_t *hwss_hir_new(const hwss_hir_config_t *config);
+hwss_hir_t *hwss_hir_new(esp_event_loop_handle_t elp_hdl, const hwss_hir_config_t *config);

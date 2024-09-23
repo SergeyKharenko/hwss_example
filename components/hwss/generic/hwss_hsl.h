@@ -1,5 +1,6 @@
 #pragma once
 
+#include "esp_event.h"
 #include "hwss_io.h"
 #include "hwss_type.h"
 
@@ -14,6 +15,7 @@ typedef struct hwss_hsl_s hwss_hsl_t;
 
 struct hwss_hsl_s{
     hwss_io_t *io;
+    esp_event_loop_handle_t elp_hdl;
 
     esp_err_t (*init)(hwss_hsl_t *hsl);
     esp_err_t (*deinit)(hwss_hsl_t *hsl);

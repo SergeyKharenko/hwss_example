@@ -17,6 +17,7 @@ typedef struct hwss_hnet_s hwss_hnet_t;
 
 struct hwss_hnet_s{
     hwss_io_t *io;
+    esp_event_loop_handle_t elp_hdl;
 
     esp_err_t (*init)(hwss_hnet_t *hnet);
     esp_err_t (*deinit)(hwss_hnet_t *hnet);

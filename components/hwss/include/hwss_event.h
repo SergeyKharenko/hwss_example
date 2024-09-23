@@ -1,64 +1,57 @@
 #pragma once
 
+#include "freertos/event_groups.h"
 #include "esp_event.h"
-
-typedef enum{
-    HWSS_INTER_NET_EVENT_IP_CONFLICT,
-    HWSS_INTER_NET_EVENT_DEST_UNREACH,
-    HWSS_INTER_NET_EVENT_PPPOE_CLOSE,
-    HWSS_INTER_NET_EVENT_MAGIC_PACK
-}hwss_inter_net_event;
-
-typedef enum{
-    HWSS_INTER_SOCK_EVENT_SEND_OK,
-    HWSS_INTER_SOCK_EVENT_TIMEOUT,
-    HWSS_INTER_SOCK_EVENT_RECV,
-    HWSS_INTER_SOCK_EVENT_DISCONN,
-    HWSS_INTER_SOCK_EVENT_CONNECT
-}hwss_inter_sock_event;
-
-typedef enum{
-    HWSS_INTER_SOCKLESS_EVENT_TIMEOUT,
-    HWSS_INTER_SOCKLESS_EVENT_ARP,
-    HWSS_INTER_SOCKLESS_EVENT_PING
-}hwss_inter_sockless_event;
 
 typedef enum{
     HWSS_EVENT_CONNECTED,
     HWSS_EVENT_DISCONNECTED,
-    
 }hwss_event_t;
+
+typedef enum{
+    HWSS_INTER_EVENT_PHY_CONNECT,
+    HWSS_INTER_EVENT_PHY_DISCONN,
+
+    HWSS_INTER_EVENT_HIR_TRIGGER,
+
+    HWSS_INTER_EVENT_HSO_SEND_OK,
+    HWSS_INTER_EVENT_HSO_TIMEOUT,
+    HWSS_INTER_EVENT_HSO_RECV,
+    HWSS_INTER_EVENT_HSO_DISCONN,
+    HWSS_INTER_EVENT_HSO_CONNECT,
+
+    HWSS_INTER_EVENT_HSL_TIMEOUT,
+    HWSS_INTER_EVENT_HSL_ARP,
+    HWSS_INTER_EVENT_HSL_PING,
+
+    HWSS_INTER_EVENT_HNET_IP_CONFLICT,
+    HWSS_INTER_EVENT_HNET_DEST_UNREACH,
+    HWSS_INTER_EVENT_HNET_PPPOE_CLOSE,
+    HWSS_INTER_EVENT_HNET_MAGIC_PACK,
+}hwss_inter_event_t;
 
 #define HWSS_EVENT_ANY_ID                       -1
 #define HWSS_EVENT_ANY_BASE                     NULL
 
 ESP_EVENT_DECLARE_BASE(HWSS_EVENT);
+ESP_EVENT_DECLARE_BASE(HWSS_INTER_EVENT);
 
-ESP_EVENT_DECLARE_BASE(HWSS_INTER_NET_EVENT);
-ESP_EVENT_DECLARE_BASE(HWSS_INTER_SOCK_EVENT);
-ESP_EVENT_DECLARE_BASE(HWSS_INTER_SOCKLESS_EVENT);
+#define HWSS_PHY_EVENTBIT_CONNECTED             1<<0
+#define HWSS_PHY_EVENTBIT_DISCONNECTED          1<<1
 
-esp_err_t hwss_event_loop_create(void);
-esp_err_t hwss_event_loop_delete(void);
+#define HWSS_HSL_EVENTBIT_TIMEOUT               1<<2
+#define HWSS_HSL_EVENTBIT_ARP                   1<<3
+#define HWSS_HSL_EVENTBIT_PING                  1<<4
 
-esp_err_t hwss_event_handler_register(esp_event_base_t event_base, int32_t event_id,
-                                     esp_event_handler_t event_handler, void* event_handler_arg);
+#define HWSS_HSO_EVENTBIT_SEND_OK               1<<5
+#define HWSS_HSO_EVENTBIT_TIMEOUT               1<<6
+#define HWSS_HSO_EVENTBIT_RECV                  1<<7
+#define HWSS_HSO_EVENTBIT_DISCONN               1<<8
+#define HWSS_HSO_EVENTBIT_CONNECT               1<<9
 
-esp_err_t hwss_event_handler_instance_register(esp_event_base_t event_base,
-                                              int32_t event_id,
-                                              esp_event_handler_t event_handler,
-                                              void *event_handler_arg,
-                                              esp_event_handler_instance_t *context);
+#define HWSS_HNET_EVENTBIT_IP_CONFLICT          1<<10
+#define HWSS_HNET_EVENTBIT_DEST_UNREACH         1<<11
+#define HWSS_HNET_EVENTBIT_PPPOE_CLOSE          1<<12
+#define HWSS_HNET_EVENTBIT_MAGIC_PACK           1<<13
 
-esp_err_t hwss_event_handler_unregister(esp_event_base_t event_base, int32_t event_id,
-                                       esp_event_handler_t event_handler);
-
-esp_err_t hwss_event_handler_instance_unregister(esp_event_base_t event_base,
-                                                int32_t event_id,
-                                                esp_event_handler_instance_t context);
-
-esp_err_t hwss_event_post(esp_event_base_t event_base, int32_t event_id,
-                         const void* event_data, size_t event_data_size, TickType_t ticks_to_wait);
-
-esp_err_t hwss_event_isr_post(esp_event_base_t event_base, int32_t event_id,
-                             const void* event_data, size_t event_data_size, BaseType_t* task_unblocked);
+#define HWSS_HIR_EVENTBIT_TRIGGER               1<<14

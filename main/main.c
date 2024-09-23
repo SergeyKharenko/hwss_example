@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <rom/ets_sys.h>
 #include "esp_log.h"
+#include "hwss_hso_wiznet.h"
 #include "hwss_hnet_wiznet.h"
 #include "hwss_mac_wiznet.h"
 #include "hwss_phy_wiznet.h"
@@ -19,7 +20,7 @@ static const char *TAG="main";
 hwss_io_spi_config_t cfg={
     .spi_host_id=SPI2_HOST,
     .cs_io_num=10,
-    .speed_khz=20*1000
+    .speed_khz=10*1000
 };
 
 hwss_phy_config_t pcfg={
@@ -41,25 +42,32 @@ hwss_hnet_config_t ncfg={
 };
 
 hwss_io_t *io;
+hwss_hir_t *hir;
 hwss_phy_t *phy;
 hwss_mac_t *mac;
 hwss_hnet_t *hnet;
+hwss_hso_t *hso;
 
 static void hwss_event_handler(void *arg, esp_event_base_t event_base,
                               int32_t event_id, void *event_data){
     switch (event_id)
     {
-    case HWSS_EVENT_CONNECTED:
+    case HWSS_INTER_EVENT_PHY_CONNECT:
         ESP_LOGI(TAG,"CONNECTED!");
         hnet->start(hnet);
+        hso->start(hso);
         break;
     
-    case HWSS_EVENT_DISCONNECTED:
+    case HWSS_INTER_EVENT_PHY_DISCONN:
         ESP_LOGW(TAG,"DISCONNECTED!");
         hnet->stop(hnet);
+        hso->stop(hso);
         break;
 
+
+
     default:
+        ESP_LOGE(TAG,"CCC");
         break;
     }
 
@@ -90,30 +98,62 @@ void app_main(void)
 
     spi_bus_initialize(SPI2_HOST,&bcfg,SPI_DMA_CH_AUTO);
 
-    
+    hwss_hir_config_t ircfg={
+        .io_num=14,
+        .tri=HWSS_TRIGGER_NEGEDGE
+    };
+
+    static uint8_t sz_cfg[]={2,2,2,2,2,2,2,2};
+
+    hwss_hso_config_t scfg={
+        .en_sock_num=4,
+        .rxbuf_size_kb=sz_cfg,
+        .txbuf_size_kb=sz_cfg,
+        .irq_inter_time_us=10,
+        .sock_active_threshold_ms=1000,
+        .sock_polling_period_ms=5
+    };
+
     // hwss_io_t *io=hwss_io_new_w5500(HWSS_IO_SPI,&cfg);
     // hwss_phy_t *phy=hwss_phy_new_w5500(io,&pcfg);
     // hwss_mac_t *mac=hwss_mac_new_w5500(io,&mcfg);
     // hwss_hnet_t *hnet=hwss_hnet_new_w5500(io,&ncfg);
 
+    esp_event_loop_args_t largs={
+        .queue_size=16,
+        .task_core_id=tskNO_AFFINITY,
+        .task_name="BASIC LOOP",
+        .task_priority=10,
+        .task_stack_size=8192
+    };
 
-    io=hwss_io_new_w5100s(HWSS_IO_SPI,&cfg);
-    phy=hwss_phy_new_w5100s(io,&pcfg);
-    mac=hwss_mac_new_w5100s(io,&mcfg);
-    hnet=hwss_hnet_new_w5100s(io,&ncfg);
+    esp_event_loop_handle_t hdl;
+    esp_event_loop_create(&largs,&hdl);
+    
+    // io=hwss_io_new_w5100s(HWSS_IO_SPI,&cfg);
+    // hir=hwss_hir_new(hdl,&ircfg);
+    // phy=hwss_phy_new_w5100s(hdl,io,&pcfg);
+    // mac=hwss_mac_new_w5100s(io,&mcfg);
+    // hnet=hwss_hnet_new_w5100s(hdl,io,&ncfg);
+    // hso=hwss_hso_new_w5100s(hdl,io,hir,&scfg);
 
-    hwss_event_loop_create();
-    // hwss_event_handler_register(HWSS_EVENT,HWSS_EVENT_ANY_ID,hwss_event_handler,NULL);
+    io=hwss_io_new_w5500(HWSS_IO_SPI,&cfg);
+    hir=hwss_hir_new(hdl,&ircfg);
+    phy=hwss_phy_new_w5500(hdl,io,&pcfg);
+    mac=hwss_mac_new_w5500(io,&mcfg);
+    hnet=hwss_hnet_new_w5500(hdl,io,&ncfg);
+    hso=hwss_hso_new_w5500(hdl,io,hir,&scfg);
+
+    esp_event_handler_register_with(hdl,HWSS_INTER_EVENT,HWSS_EVENT_ANY_ID,hwss_event_handler,NULL);
 
     io->init(io);
     phy->init(phy);
     mac->init(mac);
     hnet->init(hnet);
+    hso->init(hso);
     
-
     phy->start(phy);
 
-    hwss_event_handler_register(HWSS_EVENT,HWSS_EVENT_ANY_ID,hwss_event_handler,NULL);
     // uint8_t ver=0;
     // W5500_getVERSIONR(io,&ver);
     // ESP_LOGW(TAG,"Version:%X",ver);
@@ -133,7 +173,8 @@ void app_main(void)
     hnet->set_gateway_addr(hnet,gip);
     hnet->set_subnet_mask(hnet,mask);
 
-
+    hwss_proto_t pro=HWSS_PROTO_UDP;
+    hso->set_sock_proto(hso,0,&pro);
 
     // W5500_setSHAR(io,mac);
 
@@ -142,8 +183,7 @@ void app_main(void)
     // ESP_LOGI(TAG,"MAC: %X:%X:%X:%X:%X:%X",mac_res[0],mac_res[1],mac_res[2],mac_res[3],mac_res[4],mac_res[5]);
     // uint8_t phy_sta;
     while(1){
-        // W5500_getPHYCFGR(io,&phy_sta);
-        // ESP_LOGI(TAG,"%X",phy_sta);
-        // vTaskDelay(pdMS_TO_TICKS(200));
+
+
     }
 }

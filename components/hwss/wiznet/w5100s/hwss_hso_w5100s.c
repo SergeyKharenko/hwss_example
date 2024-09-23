@@ -489,7 +489,7 @@ err:
     return ret;
 }
 
-hwss_hso_t *hwss_hso_new_w5100s(hwss_io_t *io, const hwss_hso_config_t *config){
+hwss_hso_t *hwss_hso_new_w5100s(esp_event_loop_handle_t elp, hwss_io_t *io, hwss_hir_t *hir, const hwss_hso_config_t *config){
     hwss_hso_t *ret=NULL;
     hwss_hso_w5100s_t* hso=NULL;
 
@@ -508,7 +508,7 @@ hwss_hso_t *hwss_hso_new_w5100s(hwss_io_t *io, const hwss_hso_config_t *config){
     ESP_GOTO_ON_FALSE(tx_cache_size_kb<=W5100S_SOCK_CACHE_SIZE_KB && rx_cache_size_kb<=W5100S_SOCK_CACHE_SIZE_KB,
                         NULL,err,TAG,"sum of tx/rx cache size should not be over 16KB");
 
-    if(config->irq_gpio_num<0 && config->sock_polling_period_ms<5)
+    if(hir==NULL && config->sock_polling_period_ms<5)
         ESP_LOGW(TAG,"polling period too short might SERIOUSLY affects the execution of other tasks!");
 
     hso=calloc(1,sizeof(hwss_hso_w5100s_t));
@@ -546,15 +546,12 @@ hwss_hso_t *hwss_hso_new_w5100s(hwss_io_t *io, const hwss_hso_config_t *config){
 
     hwss_hso_scm_config_t scm_config={
         .en_sock_num=config->en_sock_num,
-        .irq_gpio_num=config->irq_gpio_num,
-        .irq_handler_task_prio=config->irq_handler_task_prio,
-        .irq_handler_task_stack_size=config->irq_handler_task_stack_size,
         .sock_active_threshold_ms=config->sock_active_threshold_ms,
         .sock_polling_period_ms=config->sock_polling_period_ms,
         .sock_total_num=W5100S_SOCK_TOTAL_NUM
     };
 
-    hso->super.scm=hwss_hso_scm_new(&hso->super,&scm_config);
+    hso->super.scm=hwss_hso_scm_new(elp,&hso->super,hir,&scm_config);
     ESP_GOTO_ON_FALSE(hso->super.scm,NULL,err,TAG,"cannot create hso_scm");
 
     hwss_hso_scm_t *hso_scm=hso->super.scm;

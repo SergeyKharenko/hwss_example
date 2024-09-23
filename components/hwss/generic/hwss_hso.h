@@ -30,11 +30,6 @@ typedef struct{
 
     uint32_t    sock_polling_period_ms;
     uint32_t    sock_active_threshold_ms;
-
-    gpio_num_t  irq_gpio_num;
-
-    uint32_t    irq_handler_task_stack_size;
-    uint32_t    irq_handler_task_prio;
 }hwss_hso_config_t;
 
 typedef struct hwss_hso_s hwss_hso_t;
@@ -76,8 +71,6 @@ struct hwss_hso_s{
 
     esp_err_t (*get_sock_state)(hwss_hso_t *hso, hwss_sockid_t id, hwss_hso_socksta_t *sta);
     esp_err_t (*get_sock_state_raw)(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *sta);
-
-    
 };
 
 typedef struct{

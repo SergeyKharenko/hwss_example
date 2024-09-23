@@ -27,24 +27,21 @@ static void hwss_hsl_w5100s_check_state_timer_cb(void *args){
     }
 
     if(slir&W5100S_SLIR_ARP){
-        if(hwss_event_post(HWSS_INTER_SOCKLESS_EVENT,HWSS_INTER_SOCKLESS_EVENT_ARP,(void *)&hsl_w5100s->super,
-                            sizeof(hwss_hsl_w5100_t *),0)!=ESP_OK){
+        if(esp_event_post_to(hsl_w5100s->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HSL_ARP,NULL,0,0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
             return;
         }
     }
 
     if(slir&W5100S_SLIR_TIMEOUT){
-        if(hwss_event_post(HWSS_INTER_SOCKLESS_EVENT,HWSS_INTER_SOCKLESS_EVENT_TIMEOUT,(void *)&hsl_w5100s->super,
-                            sizeof(hwss_hsl_w5100_t *),0)!=ESP_OK){
+        if(esp_event_post_to(hsl_w5100s->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HSL_TIMEOUT,NULL,0,0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
             return;
         }
     }
 
     if(slir&W5100S_SLIR_PING){
-        if(hwss_event_post(HWSS_INTER_SOCKLESS_EVENT,HWSS_INTER_SOCKLESS_EVENT_PING,(void *)&hsl_w5100s->super,
-                            sizeof(hwss_hsl_w5100_t *),0)!=ESP_OK){
+        if(esp_event_post_to(hsl_w5100s->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HSL_PING,NULL,0,0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
             return;
         }
@@ -154,7 +151,7 @@ err:
 }
 
 
-hwss_hsl_t *hwss_hsl_new_w5100s(hwss_io_t *io, const hwss_hsl_config_t *config){
+hwss_hsl_t *hwss_hsl_new_w5100s(esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_hsl_config_t *config){
     hwss_hsl_t *ret=NULL;
     hwss_hsl_w5100_t *hsl=NULL;
 
@@ -165,6 +162,7 @@ hwss_hsl_t *hwss_hsl_new_w5100s(hwss_io_t *io, const hwss_hsl_config_t *config){
     ESP_GOTO_ON_FALSE(hsl,NULL,err,TAG,"calloc hsl failed!");
 
     hsl->super.io=io;
+    hsl->super.elp_hdl=elp_hdl;
     hsl->super.init=hwss_hsl_w5100s_init;
     hsl->super.deinit=hwss_hsl_w5100s_deinit;
     hsl->super.set_peer_addr=hwss_hsl_w5100s_set_peer_addr;

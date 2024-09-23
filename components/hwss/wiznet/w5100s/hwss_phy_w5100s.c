@@ -66,12 +66,12 @@ static void hwss_phy_w5100s_check_timer_cb(void *args){
 
     if(link!=link_p){
         if(link==HWSS_LINK_UP){
-            if(hwss_event_post(HWSS_EVENT,HWSS_EVENT_CONNECTED,(void *)&phy_w5100s->super,sizeof(hwss_phy_t *),0)!= ESP_OK)
+            if(esp_event_post_to(phy_w5100s->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_PHY_CONNECT,NULL,0,0)!= ESP_OK)
                 ESP_LOGE(TAG,"fail to post event");
             ESP_LOGD(TAG,"Connected");
         }
         else{
-            if(hwss_event_post(HWSS_EVENT,HWSS_EVENT_DISCONNECTED,(void *)&phy_w5100s->super,sizeof(hwss_phy_t *),0)!=ESP_OK)
+            if(esp_event_post_to(phy_w5100s->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_PHY_DISCONN,NULL,0,0)!= ESP_OK)
                 ESP_LOGE(TAG,"fail to post event");
             ESP_LOGD(TAG,"Disconnected");
         }
@@ -208,10 +208,10 @@ static esp_err_t hwss_phy_w5100s_set_link(hwss_phy_t *phy, hwss_link_t link){
     if(link!=link_p){
         atomic_store(&(phy_w5100s->link),link);
         if(link==HWSS_LINK_UP)
-            ESP_GOTO_ON_ERROR(esp_event_post(HWSS_EVENT,HWSS_EVENT_CONNECTED,(void *)&phy_w5100s->super,sizeof(hwss_phy_t),0),
+            ESP_GOTO_ON_ERROR(esp_event_post_to(phy_w5100s->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_PHY_CONNECT,NULL,0,0),
                             err,TAG,"fail to post event");
         else
-            ESP_GOTO_ON_ERROR(esp_event_post(HWSS_EVENT,HWSS_EVENT_DISCONNECTED,(void *)&phy_w5100s->super,sizeof(hwss_phy_t),0),
+            ESP_GOTO_ON_ERROR(esp_event_post_to(phy_w5100s->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_PHY_DISCONN,NULL,0,0),
                             err,TAG,"fail to post event");
     }
 
@@ -299,7 +299,7 @@ static esp_err_t hwss_phy_w5100s_get_duplex(hwss_phy_t *phy, hwss_duplex_t *dupl
     return ESP_OK;
 }
 
-hwss_phy_t *hwss_phy_new_w5100s(hwss_io_t *io, const hwss_phy_config_t *phy_config){
+hwss_phy_t *hwss_phy_new_w5100s(esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_phy_config_t *phy_config){
     hwss_phy_t *ret=NULL;
     hwss_phy_w5100s_t* phy=NULL;
 
@@ -315,6 +315,7 @@ hwss_phy_t *hwss_phy_new_w5100s(hwss_io_t *io, const hwss_phy_config_t *phy_conf
         ESP_LOGW(TAG,"check period too short might SERIOUSLY affects the execution of other tasks!");
     
     phy->super.io=io;
+    phy->super.elp_hdl=elp_hdl;
     phy->super.reset=hwss_phy_w5100s_reset;
     phy->super.init=hwss_phy_w5100s_init;
     phy->super.deinit=hwss_phy_w5100s_deinit;

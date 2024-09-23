@@ -1,12 +1,15 @@
+#include "esp_attr.h"
 #include "esp_check.h"
+#include "esp_event.h"
+#include "hwss_event.h"
 #include "hwss_hir.h"
 
 static const char *TAG = "hwss_hir";
 
 IRAM_ATTR static void hwss_hir_isr_handler(void *args){
     hwss_hir_t *hir=(hwss_hir_t *)args;
-    if(hir->handler!=NULL)
-        hir->handler(hir->args);
+    BaseType_t unblock=pdTRUE;
+    esp_event_isr_post_to(hir->elp_hdl,HWSS_INTER_EVENT,HWSS_HIR_EVENTBIT_TRIGGER,NULL,0,&unblock);
 }
 
 static esp_err_t hwss_hir_init(hwss_hir_t *hir){
@@ -70,40 +73,32 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hir_setIRQ_handler(hwss_hir_t *hir, void (*handler)(void *), void *args){
-    esp_err_t ret=ESP_OK;
-    if(hir->is_started){
-        ESP_GOTO_ON_ERROR(hir->stop(hir),err,TAG,"cannot pause hir");
-        hir->handler=handler;
-        hir->args=args;
-        ESP_GOTO_ON_ERROR(hir->start(hir),err,TAG,"cannot restart hir");
-    }
-    else{
-        hir->handler=handler;
-        hir->args=args;
-    }
-err:
-    return ret;
+static esp_err_t hwss_hir_register_handler(hwss_hir_t *hir, esp_event_handler_t handler, void *args){
+    return esp_event_handler_register_with(hir->elp_hdl,HWSS_INTER_EVENT,HWSS_HIR_EVENTBIT_TRIGGER,handler,args);
 }
 
-hwss_hir_t *hwss_hir_new(const hwss_hir_config_t *config){
+static esp_err_t hwss_hir_unregister_handler(hwss_hir_t *hir, esp_event_handler_t handler){
+    return esp_event_handler_unregister_with(hir->elp_hdl,HWSS_INTER_EVENT,HWSS_HIR_EVENTBIT_TRIGGER,handler);
+}
+
+hwss_hir_t *hwss_hir_new(esp_event_loop_handle_t elp_hdl, const hwss_hir_config_t *config){
     hwss_hir_t *ret=NULL;
 
     ret=calloc(1,sizeof(hwss_hir_t));
     ESP_GOTO_ON_FALSE(ret,NULL,err,TAG,"fail to calloc hwss_hir_t");
 
-    ret->args=NULL;
-    ret->handler=NULL;
     ret->io_num=config->io_num;
     ret->tri=config->tri;
     ret->is_started=false;
+    ret->elp_hdl=elp_hdl;
     
     ret->init=hwss_hir_init;
     ret->deinit=hwss_hir_deinit;
     ret->start=hwss_hir_start;
     ret->stop=hwss_hir_stop;
-    ret->setIRQ_handler=hwss_hir_setIRQ_handler;
-    
+    ret->register_handler=hwss_hir_register_handler;
+    ret->unregister_handler=hwss_hir_unregister_handler;
+
 err:
     return ret;
 }

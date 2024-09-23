@@ -1,6 +1,7 @@
 #pragma once
 #include "esp_timer.h"
 #include "driver/gpio.h"
+#include "hwss_hir.h"
 #include "hwss_hso.h"
 
 // State Control Manager
@@ -17,11 +18,6 @@ typedef struct{
 
     uint32_t    sock_polling_period_ms;
     uint32_t    sock_active_threshold_ms;
-
-    gpio_num_t  irq_gpio_num;
-
-    uint32_t    irq_handler_task_stack_size;
-    uint32_t    irq_handler_task_prio;
 }hwss_hso_scm_config_t;
 
 typedef struct hwss_hso_scm_timer_arg_s hwss_hso_scm_timer_arg_t;
@@ -29,17 +25,15 @@ typedef struct hwss_hso_scm_s hwss_hso_scm_t;
 
 struct hwss_hso_scm_s{
     hwss_hso_t  *hso;
+    hwss_hir_t  *hir;
 
     uint32_t    sock_polling_period_ms;
     uint32_t    sock_active_threshold_ms;
 
-    gpio_num_t  irq_gpio_num;
-
-    uint32_t    irq_task_stack_size;
-    uint32_t    irq_task_prio;
-
     uint8_t     en_sock_num;
     uint8_t     active_sock_num;
+
+    esp_event_loop_handle_t elp_hdl;
 
     hwss_hso_sockact_sta_t  *sockact_sta_list;
     
@@ -47,8 +41,6 @@ struct hwss_hso_scm_s{
     esp_timer_handle_t      sock_polling_timer;
 
     hwss_hso_scm_timer_arg_t *socktimer_args;
-
-    TaskHandle_t            irq_handler;
 
     bool        is_started;
 
@@ -76,4 +68,4 @@ struct hwss_hso_scm_timer_arg_s{
     hwss_sockid_t   id;
 };
 
-hwss_hso_scm_t *hwss_hso_scm_new(hwss_hso_t *hso, const hwss_hso_scm_config_t *config);
+hwss_hso_scm_t *hwss_hso_scm_new(esp_event_loop_handle_t elp_hdl, hwss_hso_t *hso, hwss_hir_t  *hir, const hwss_hso_scm_config_t *config);

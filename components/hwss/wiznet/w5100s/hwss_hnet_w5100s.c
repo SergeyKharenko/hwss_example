@@ -33,22 +33,19 @@ static void hwss_hnet_w5100s_check_state_timer_cb(void *args){
     }
 
     if(ir&W5100S_IR_CONFLICT){        
-        if(hwss_event_post(HWSS_INTER_NET_EVENT,HWSS_INTER_NET_EVENT_IP_CONFLICT,(void *)&hnet_w5100s->super,
-                        sizeof(hwss_hnet_t *),0)!=ESP_OK){
+        if(esp_event_post_to(hnet_w5100s->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HNET_IP_CONFLICT,NULL,0,0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
         }
     }
 
     if(ir&W5100S_IR_UNREACH){        
-        if(hwss_event_post(HWSS_INTER_NET_EVENT,HWSS_INTER_NET_EVENT_DEST_UNREACH,(void *)&hnet_w5100s->super,
-                        sizeof(hwss_hnet_t *),0)!=ESP_OK){
+        if(esp_event_post_to(hnet_w5100s->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HNET_DEST_UNREACH,NULL,0,0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
         }
     }
 
     if(ir&W5100S_IR_PPPoE){        
-        if(hwss_event_post(HWSS_INTER_NET_EVENT,HWSS_INTER_NET_EVENT_PPPOE_CLOSE,(void *)&hnet_w5100s->super,
-                        sizeof(hwss_hnet_t *),0)!=ESP_OK){
+        if(esp_event_post_to(hnet_w5100s->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HNET_PPPOE_CLOSE,NULL,0,0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
         }
     }
@@ -294,7 +291,7 @@ err:
     return ret;
 }
 
-hwss_hnet_t *hwss_hnet_new_w5100s(hwss_io_t *io, hwss_hnet_config_t *config){
+hwss_hnet_t *hwss_hnet_new_w5100s(esp_event_loop_handle_t elp_hdl, hwss_io_t *io, hwss_hnet_config_t *config){
     hwss_hnet_t *ret=NULL;
     hwss_hnet_w5100s_t* hnet=NULL;
 
@@ -307,6 +304,7 @@ hwss_hnet_t *hwss_hnet_new_w5100s(hwss_io_t *io, hwss_hnet_config_t *config){
     ESP_GOTO_ON_FALSE(hnet,NULL,err,TAG,"calloc hnet failed!");
 
     hnet->super.io=io;
+    hnet->super.elp_hdl=elp_hdl;
     hnet->super.init=hwss_hnet_w5100s_init;
     hnet->super.deinit=hwss_hnet_w5100s_deinit;
     hnet->super.start=hwss_hnet_w5100s_start;
