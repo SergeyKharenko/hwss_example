@@ -15,10 +15,10 @@ extern "C" {
 
 #define _W5500_SPI_VDM_OP_              0x00
 
-#define W5500_CREG_BLOCK              0x00 	//< Common register block
-#define W5500_SREG_BLOCK(N)           (1+4*N) //< Socket N register block
-#define W5500_TXBUF_BLOCK(N)          (2+4*N) //< Socket N Tx buffer address block
-#define W5500_RXBUF_BLOCK(N)          (3+4*N) //< Socket N Rx buffer address block
+#define W5500_CREG_BLOCK                0x00 	//< Common register block
+#define W5500_SREG_BLOCK(N)             (1+4*N) //< Socket N register block
+#define W5500_TXBUF_BLOCK(N)            (2+4*N) //< Socket N Tx buffer address block
+#define W5500_RXBUF_BLOCK(N)            (3+4*N) //< Socket N Rx buffer address block
 
 //------------------------------- defgroup end --------------------------------------------
 //----------------------------- W5500 Common Registers IOMAP -----------------------------

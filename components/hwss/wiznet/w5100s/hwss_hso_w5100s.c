@@ -7,8 +7,8 @@
 #include "hwss_hso_scm.h"
 #include "hwss_hso_wiznet.h"
 
-#define W5100S_SOCK_TOTAL_NUM                                4
-#define W5100S_SOCK_CACHE_SIZE_KB                            16
+#define W5100S_SOCKNUM                                          4
+#define W5100S_SOCK_CACHE_SIZE_KB                               16
 
 static const uint8_t    w5100s_sock_mode_default=            W5100S_Sn_MR_CLOSE;
 static const uint16_t   w5100s_sock_port_defualt=            0x0000;
@@ -59,9 +59,8 @@ typedef union{
 typedef struct{
     hwss_hso_t          super;
     
-    uint8_t             en_sock_num;
-    uint8_t             txbuf_size_kb[W5100S_SOCK_TOTAL_NUM];
-    uint8_t             rxbuf_size_kb[W5100S_SOCK_TOTAL_NUM];
+    uint8_t             txbuf_size_kb[W5100S_SOCKNUM];
+    uint8_t             rxbuf_size_kb[W5100S_SOCKNUM];
     uint16_t            irq_inter_tick;
 
     bool                is_started;
@@ -174,7 +173,7 @@ static esp_err_t hwss_hso_w5100s_init(hwss_hso_t *hso){
 
     ESP_GOTO_ON_ERROR(W5100S_setINTPTMR(hso->io,&(hso_w5100s->irq_inter_tick)),err,TAG,"cannot write INTPTMR");
 
-    for(hwss_sockid_t id=0;id<W5100S_SOCK_TOTAL_NUM;id++){
+    for(hwss_sockid_t id=0;id<W5100S_SOCKNUM;id++){
         ESP_GOTO_ON_ERROR(W5100S_setSn_MR(hso->io,id,&w5100s_sock_mode_default),err,TAG,"cannot write Sn_MR");
         ESP_GOTO_ON_ERROR(W5100S_setSn_PORT(hso->io,id,&w5100s_sock_port_defualt),err,TAG,"cannot write Sn_PORT");
         ESP_GOTO_ON_ERROR(W5100S_setSn_DHAR(hso->io,id,w5100s_sock_dest_mac_addr_default),err,TAG,"cannot write Sn_DHAR");
@@ -543,14 +542,13 @@ hwss_hso_t *hwss_hso_new_w5100s(esp_event_loop_handle_t elp, hwss_io_t *io, hwss
 
     ESP_GOTO_ON_FALSE(io,NULL,err,TAG,"cannot set io to null");
     ESP_GOTO_ON_FALSE(config,NULL,err,TAG,"cannot set config to null");
-    ESP_GOTO_ON_FALSE(config->en_sock_num>1,NULL,err,TAG,"at least 2 sockets should be enabled");
-    ESP_GOTO_ON_FALSE(config->en_sock_num<=W5100S_SOCK_TOTAL_NUM,NULL,err,TAG,"max socket of W5100S is 8");
-    ESP_GOTO_ON_FALSE(config->txbuf_size_kb && config->rxbuf_size_kb,NULL,err,TAG,"cannot set tx/rxbuf_size_kb to null");
+    ESP_GOTO_ON_FALSE(config->en_socknum>1,NULL,err,TAG,"at least 2 sockets should be enabled");
+    ESP_GOTO_ON_FALSE(config->en_socknum<=W5100S_SOCKNUM,NULL,err,TAG,"max socket of W5100S is 8");
 
     uint16_t tx_cache_size_kb=0, rx_cache_size_kb=0;
-    for(hwss_sockid_t id=0;id<config->en_sock_num;id++){
-        tx_cache_size_kb+=config->txbuf_size_kb[id];
-        rx_cache_size_kb+=config->rxbuf_size_kb[id];
+    for(hwss_sockid_t id=0;id<config->en_socknum;id++){
+        tx_cache_size_kb+=config->tx_buffsize_kb[id];
+        rx_cache_size_kb+=config->rx_buffsize_kb[id];
     }
 
     ESP_GOTO_ON_FALSE(tx_cache_size_kb<=W5100S_SOCK_CACHE_SIZE_KB && rx_cache_size_kb<=W5100S_SOCK_CACHE_SIZE_KB,
@@ -587,17 +585,16 @@ hwss_hso_t *hwss_hso_new_w5100s(esp_event_loop_handle_t elp, hwss_io_t *io, hwss
     hso->super.get_sock_state=hwss_hso_w5100s_get_sock_state;
     hso->super.get_sock_state_raw=hwss_hso_w5100s_get_sock_state_raw;
 
-    hso->en_sock_num=config->en_sock_num;
     hso->irq_inter_tick=config->irq_inter_time_us*25;
-    memcpy(hso->txbuf_size_kb,config->txbuf_size_kb,hso->en_sock_num);
-    memcpy(hso->rxbuf_size_kb,config->rxbuf_size_kb,hso->en_sock_num);
+    memcpy(hso->txbuf_size_kb,config->tx_buffsize_kb,W5100S_SOCKNUM);
+    memcpy(hso->rxbuf_size_kb,config->rx_buffsize_kb,W5100S_SOCKNUM);
     hso->is_started=false;
 
     hwss_hso_scm_config_t scm_config={
-        .en_sock_num=config->en_sock_num,
+        .en_socknum=config->en_socknum,
         .sock_active_threshold_ms=config->sock_active_threshold_ms,
         .sock_polling_period_ms=config->sock_polling_period_ms,
-        .sock_total_num=W5100S_SOCK_TOTAL_NUM
+        .sock_total_num=W5100S_SOCKNUM
     };
 
     hso->super.scm=hwss_hso_scm_new(elp,&hso->super,hir,&scm_config);

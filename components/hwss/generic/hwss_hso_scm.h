@@ -14,7 +14,7 @@
 
 typedef struct{
     uint8_t     sock_total_num;
-    uint8_t     en_sock_num;
+    uint8_t     en_socknum;
 
     uint32_t    sock_polling_period_ms;
     uint32_t    sock_active_threshold_ms;
@@ -30,7 +30,7 @@ struct hwss_hso_scm_s{
     uint32_t    sock_polling_period_ms;
     uint32_t    sock_active_threshold_ms;
 
-    uint8_t     en_sock_num;
+    uint8_t     en_socknum;
     uint8_t     active_sock_num;
 
     esp_event_loop_handle_t elp_hdl;

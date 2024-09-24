@@ -7,7 +7,7 @@
 #include "hwss_hso_scm.h"
 #include "hwss_hso_wiznet.h"
 
-#define W5500_SOCK_TOTAL_NUM                                8
+#define W5500_SOCKNUM                                       8
 #define W5500_SOCK_CACHE_SIZE_KB                            16
 
 static const uint8_t    w5500_sock_mode_default=            W5500_Sn_MR_CLOSE;
@@ -35,13 +35,14 @@ typedef union{
 typedef struct{
     hwss_hso_t          super;
     
-    uint32_t            sock_check_state_period_ms;
-    uint8_t             en_sock_num;
-    uint8_t             txbuf_size_kb[W5500_SOCK_TOTAL_NUM];
-    uint8_t             rxbuf_size_kb[W5500_SOCK_TOTAL_NUM];
+    uint8_t             txbuf_size_kb[W5500_SOCKNUM];
+    uint8_t             rxbuf_size_kb[W5500_SOCKNUM];
     uint16_t            irq_inter_tick;
 
     bool                is_started;
+
+    uint8_t             *dma_gintr;
+    uint8_t             *dma_sintr;
 }hwss_hso_w5500_t;
 
 ////////
@@ -50,7 +51,9 @@ typedef struct{
 static esp_err_t hwss_hso_scm_w5500_get_sock_global_intr(hwss_hso_scm_t *hso_scm, uint8_t *intr){
     esp_err_t ret=ESP_OK;
     hwss_hso_t *hso=hso_scm->hso;
-    ESP_GOTO_ON_ERROR(W5500_getSIR(hso->io,intr),err,TAG,"cannot read SIR");
+    hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
+    ESP_GOTO_ON_ERROR(W5500_getSIR(hso->io,hso_w5500->dma_gintr),err,TAG,"cannot read SIR");
+    *intr=*(hso_w5500->dma_gintr);
 err:
     return ret;
 }
@@ -87,10 +90,11 @@ err:
 static esp_err_t hwss_hso_scm_w5500_get_sock_intr(hwss_hso_scm_t *hso_scm, hwss_sockid_t id, uint8_t *intr){
     esp_err_t ret=ESP_OK;
     hwss_hso_t *hso=hso_scm->hso;
-    uint8_t snir=0;
+    hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
-    ESP_GOTO_ON_ERROR(W5500_getSn_IR(hso->io,id,&snir),err,TAG,"cannot read Sn_IR");
-
+    ESP_GOTO_ON_ERROR(W5500_getSn_IR(hso->io,id,hso_w5500->dma_sintr),err,TAG,"cannot read Sn_IR");
+    uint8_t snir=*hso_w5500->dma_sintr;
+    
     if(snir&W5500_Sn_IR_SENDOK)
         *intr|= HWSS_HSO_INTR_SEND_OK;
 
@@ -145,7 +149,7 @@ static esp_err_t hwss_hso_w5500_init(hwss_hso_t *hso){
 
     ESP_GOTO_ON_ERROR(W5500_setINTLEVEL(hso->io,&(hso_w5500->irq_inter_tick)),err,TAG,"cannot write INTLEVEL");
 
-    for(hwss_sockid_t id=0;id<W5500_SOCK_TOTAL_NUM;id++){
+    for(hwss_sockid_t id=0;id<W5500_SOCKNUM;id++){
         ESP_GOTO_ON_ERROR(W5500_setSn_MR(hso->io,id,&w5500_sock_mode_default),err,TAG,"cannot write Sn_MR");
         ESP_GOTO_ON_ERROR(W5500_setSn_PORT(hso->io,id,&w5500_sock_port_defualt),err,TAG,"cannot write Sn_PORT");
         ESP_GOTO_ON_ERROR(W5500_setSn_DHAR(hso->io,id,w5500_sock_dest_mac_addr_default),err,TAG,"cannot write Sn_DHAR");
@@ -200,6 +204,84 @@ static esp_err_t hwss_hso_w5500_stop(hwss_hso_t *hso){
     
     ESP_GOTO_ON_ERROR(hso_scm->stop(hso_scm),err,TAG,"cannot stop hwss_hso_scm");
     hso_w5500->is_started=false;
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hso_w5500_ctrl_sock(hwss_hso_t *hso, hwss_sockid_t id, hwss_hso_sockctrl_t ctrl){
+    esp_err_t ret=ESP_OK;
+    uint8_t sncr=0;
+
+    while(1){
+        ESP_GOTO_ON_ERROR(W5500_getSn_CR(hso->io,id,&sncr),err,TAG,"cannot read Sn_CR");
+        if(sncr!=0)
+            continue;
+        else
+            break;
+    }
+
+    switch (ctrl)
+    {
+        case HWSS_HSO_SOCKCTRL_OPEN: sncr|=W5500_Sn_CR_OPEN; break;
+        case HWSS_HSO_SOCKCTRL_LISTEN: sncr|=W5500_Sn_CR_LISTEN; break;
+        case HWSS_HSO_SOCKCTRL_CONNECT: sncr|=W5500_Sn_CR_CONNECT; break;
+        case HWSS_HSO_SOCKCTRL_DISCONN: sncr|=W5500_Sn_CR_DISCON; break;
+        case HWSS_HSO_SOCKCTRL_CLOSE: sncr|=W5500_Sn_CR_CLOSE; break;
+        case HWSS_HSO_SOCKCTRL_SEND: sncr|=W5500_Sn_CR_SEND; break;
+        case HWSS_HSO_SOCKCTRL_SENDMAC: sncr|=W5500_Sn_CR_SEND_MAC; break;
+        case HWSS_HSO_SOCKCTRL_SENDKEEP: sncr|=W5500_Sn_CR_SEND_KEEP; break;
+        case HWSS_HSO_SOCKCTRL_RECV: sncr|=W5500_Sn_CR_RECV; break;
+        default:
+            ret=ESP_ERR_NOT_SUPPORTED;
+            goto err;
+    }
+
+    ESP_GOTO_ON_ERROR(W5500_setSn_CR(hso->io,id,&sncr),err,TAG,"cannot write Sn_CR");
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hso_w5500_write_tx_buffer(hwss_hso_t *hso, hwss_sockid_t id, const uint8_t *data, uint16_t len){
+    esp_err_t ret=ESP_OK;
+    if(len==0)
+        return ret;
+
+    uint16_t txwr=0;
+    ESP_GOTO_ON_ERROR(W5500_getSn_TX_WR(hso->io,id,&txwr),err,TAG,"cannot read Sn_TX_WR");
+    ESP_GOTO_ON_ERROR(W5500_writeSn_TXBUF(hso->io,id,txwr,data,len),err,TAG,"cannot write Sn_TXBUF");
+
+    txwr+=len;
+    ESP_GOTO_ON_ERROR(W5500_setSn_TX_WR(hso->io,id,&txwr),err,TAG,"cannot update Sn_TX_WR");
+
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hso_w5500_read_rx_buffer(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *data, uint16_t len){
+    esp_err_t ret=ESP_OK;
+    if(len==0)
+        return ret;
+    
+    uint16_t rxrd=0;
+    ESP_GOTO_ON_ERROR(W5500_getSn_RX_RD(hso->io,id,&rxrd),err,TAG,"cannot read Sn_RX_RD");
+    ESP_GOTO_ON_ERROR(W5500_readSn_RXBUF(hso->io,id,rxrd,data,len),err,TAG,"cannot read Sn_RXBUF");
+
+    rxrd+=len;
+    ESP_GOTO_ON_ERROR(W5500_setSn_RX_RD(hso->io,id,&rxrd),err,TAG,"cannot update Sn_RX_RD");
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hso_w5500_get_tx_free_length(hwss_hso_t *hso, hwss_sockid_t id, uint16_t *len){
+    esp_err_t ret=ESP_OK;
+    ESP_GOTO_ON_ERROR(W5500_getSn_TX_FSR(hso->io,id,len),err,TAG,"cannot read Sn_TX_FSR");
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hso_w5500_get_rx_length(hwss_hso_t *hso, hwss_sockid_t id, uint16_t *len){
+    esp_err_t ret=ESP_OK;
+    ESP_GOTO_ON_ERROR(W5500_getSn_RX_RSR(hso->io,id,len),err,TAG,"cannot read Sn_RX_RSR");
 err:
     return ret;
 }
@@ -447,14 +529,13 @@ hwss_hso_t *hwss_hso_new_w5500(esp_event_loop_handle_t elp, hwss_io_t *io, hwss_
 
     ESP_GOTO_ON_FALSE(io,NULL,err,TAG,"cannot set io to null");
     ESP_GOTO_ON_FALSE(config,NULL,err,TAG,"cannot set config to null");
-    ESP_GOTO_ON_FALSE(config->en_sock_num>1,NULL,err,TAG,"at least 2 sockets should be enabled");
-    ESP_GOTO_ON_FALSE(config->en_sock_num<=W5500_SOCK_TOTAL_NUM,NULL,err,TAG,"max socket of W5500 is 8");
-    ESP_GOTO_ON_FALSE(config->txbuf_size_kb && config->rxbuf_size_kb,NULL,err,TAG,"cannot set tx/rxbuf_size_kb to null");
+    ESP_GOTO_ON_FALSE(config->en_socknum>1,NULL,err,TAG,"at least 2 sockets should be enabled");
+    ESP_GOTO_ON_FALSE(config->en_socknum<=W5500_SOCKNUM,NULL,err,TAG,"max socket of W5500 is 8");
 
     uint16_t tx_cache_size_kb=0, rx_cache_size_kb=0;
-    for(hwss_sockid_t id=0;id<config->en_sock_num;id++){
-        tx_cache_size_kb+=config->txbuf_size_kb[id];
-        rx_cache_size_kb+=config->rxbuf_size_kb[id];
+    for(hwss_sockid_t id=0;id<config->en_socknum;id++){
+        tx_cache_size_kb+=config->tx_buffsize_kb[id];
+        rx_cache_size_kb+=config->rx_buffsize_kb[id];
     }
 
     ESP_GOTO_ON_FALSE(tx_cache_size_kb<=W5500_SOCK_CACHE_SIZE_KB && rx_cache_size_kb<=W5500_SOCK_CACHE_SIZE_KB,
@@ -471,6 +552,11 @@ hwss_hso_t *hwss_hso_new_w5500(esp_event_loop_handle_t elp, hwss_io_t *io, hwss_
     hso->super.deinit=hwss_hso_w5500_deinit;
     hso->super.start=hwss_hso_w5500_start;
     hso->super.stop=hwss_hso_w5500_stop;
+    hso->super.ctrl_sock=hwss_hso_w5500_ctrl_sock;
+    hso->super.write_tx_buffer=hwss_hso_w5500_write_tx_buffer;
+    hso->super.read_rx_buffer=hwss_hso_w5500_read_rx_buffer;
+    hso->super.get_rx_length=hwss_hso_w5500_get_rx_length;
+    hso->super.get_tx_free_length=hwss_hso_w5500_get_tx_free_length;
     hso->super.set_sock_proto=hwss_hso_w5500_set_sock_proto;
     hso->super.get_sock_proto=hwss_hso_w5500_get_sock_proto;
     hso->super.set_sockmode_opt=hwss_hso_w5500_set_sockmode_opt;
@@ -490,20 +576,25 @@ hwss_hso_t *hwss_hso_new_w5500(esp_event_loop_handle_t elp, hwss_io_t *io, hwss_
     hso->super.get_sock_state=hwss_hso_w5500_get_sock_state;
     hso->super.get_sock_state_raw=hwss_hso_w5500_get_sock_state_raw;
 
-    hso->en_sock_num=config->en_sock_num;
     if(config->irq_inter_time_us==0)
         hso->irq_inter_tick=0;
     else
         hso->irq_inter_tick=config->irq_inter_time_us*150/4-1;
-    memcpy(hso->txbuf_size_kb,config->txbuf_size_kb,hso->en_sock_num);
-    memcpy(hso->rxbuf_size_kb,config->rxbuf_size_kb,hso->en_sock_num);
+    memcpy(hso->txbuf_size_kb,config->tx_buffsize_kb,W5500_SOCKNUM);
+    memcpy(hso->rxbuf_size_kb,config->rx_buffsize_kb,W5500_SOCKNUM);
+
+    hso->dma_gintr=heap_caps_malloc(1,MALLOC_CAP_DMA);
+    hso->dma_sintr=heap_caps_malloc(1,MALLOC_CAP_DMA);
+
+    ESP_GOTO_ON_FALSE(hso->dma_gintr&&hso->dma_sintr,NULL,err,TAG,"cannot malloc dma cache");
+
     hso->is_started=false;
 
     hwss_hso_scm_config_t scm_config={
-        .en_sock_num=config->en_sock_num,
+        .en_socknum=config->en_socknum,
         .sock_active_threshold_ms=config->sock_active_threshold_ms,
         .sock_polling_period_ms=config->sock_polling_period_ms,
-        .sock_total_num=W5500_SOCK_TOTAL_NUM
+        .sock_total_num=W5500_SOCKNUM
     };
 
     hso->super.scm=hwss_hso_scm_new(elp,&hso->super,hir,&scm_config);

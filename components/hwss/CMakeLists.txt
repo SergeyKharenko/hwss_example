@@ -1,4 +1,4 @@
-set(srcs "hwss_event.c" "generic/hwss_hso_scm.c" "generic/hwss_hir.c")
+set(srcs "hwss_event.c" "hwss_dhcp.c" "generic/hwss_hso_scm.c" "generic/hwss_hir.c")
 set(inc_dirs "include" "generic")
 
 list(APPEND srcs 

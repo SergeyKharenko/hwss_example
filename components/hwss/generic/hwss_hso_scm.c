@@ -42,16 +42,14 @@ static void hwss_hso_scm_ir_handler(void* event_handler_arg,
                                     int32_t event_id,
                                     void* event_data){
     hwss_hso_scm_t *hso_scm=(hwss_hso_scm_t *)event_handler_arg;
-    
-    uint8_t gintr=0;
-    uint8_t sintr=0;
+    uint8_t gintr=0,sintr=0;
 
     if(hso_scm->drv.get_sock_global_intr(hso_scm,&gintr)!=ESP_OK){
         ESP_LOGE(TAG,"cannot get socket global interrupt");
         return;
     }
 
-    for(hwss_sockid_t id=0;id<hso_scm->en_sock_num;id++){
+    for(hwss_sockid_t id=0;id<hso_scm->en_socknum;id++){
         if(gintr&0x01 && hso_scm->sockact_sta_list[id]==HWSS_HSO_SOCKACT_IDLE){
             if(hso_scm->drv.get_sock_intr(hso_scm,id,&sintr)!=ESP_OK){
                 ESP_LOGE(TAG,"cannot read sock%u status",id);
@@ -61,6 +59,14 @@ static void hwss_hso_scm_ir_handler(void* event_handler_arg,
             if(hwss_hso_scm_sock_event_post(hso_scm,id,sintr)!=ESP_OK)
                 continue;
 
+            if(hso_scm->drv.clear_sock_intr(hso_scm,id)!=ESP_OK)
+                continue;
+
+            if(hso_scm->drv.set_sock_global_intr_enable(hso_scm,id,false)!=ESP_OK){
+                ESP_LOGE(TAG,"fail to mask sock%u global interrupt",id);
+                continue;
+            }
+
             hso_scm->sockact_sta_list[id]=HWSS_HSO_SOCKACT_ACTIVE;
             if(hso_scm->active_sock_num==0)
                 if(esp_timer_start_periodic(hso_scm->sock_polling_timer,hso_scm->sock_polling_period_ms*1000)!=ESP_OK){
@@ -68,11 +74,7 @@ static void hwss_hso_scm_ir_handler(void* event_handler_arg,
                     continue;
                 }
             hso_scm->active_sock_num++;
-
-            if(hso_scm->drv.set_sock_global_intr_enable(hso_scm,id,false)!=ESP_OK){
-                ESP_LOGE(TAG,"fail to mask sock%u global interrupt",id);
-                continue;
-            }
+            ESP_LOGD(TAG,"SOCK%u Active",id);
 
             if(esp_timer_start_once(hso_scm->socktimer_list[id],hso_scm->sock_active_threshold_ms*1000)!=ESP_OK){
                 ESP_LOGE(TAG,"fail to start sock%u timer",id);
@@ -85,15 +87,14 @@ static void hwss_hso_scm_ir_handler(void* event_handler_arg,
 
 static void hwss_hso_scm_sock_polling_timer_cb(void *args){
     hwss_hso_scm_t *hso_scm=(hwss_hso_scm_t *)args;
-    uint8_t gintr;
-    uint8_t sintr;
+    uint8_t gintr=0,sintr=0;
 
     if(hso_scm->drv.get_sock_global_intr(hso_scm,&gintr)!=ESP_OK){
         ESP_LOGE(TAG,"cannot get socket global interrupt");
         return;
     }
 
-    for(hwss_sockid_t id=0;id<hso_scm->en_sock_num;id++){
+    for(hwss_sockid_t id=0;id<hso_scm->en_socknum;id++){
         if(gintr&0x01&&hso_scm->sockact_sta_list[id]==HWSS_HSO_SOCKACT_ACTIVE){
             if(hso_scm->drv.get_sock_intr(hso_scm,id,&sintr)!=ESP_OK){
                 ESP_LOGE(TAG,"cannot get socket%u interrupt",id);
@@ -129,6 +130,7 @@ static void hwss_hso_scm_sockact_timer_cb(void *args){
             return;
         }
     hso_scm->sockact_sta_list[id]=HWSS_HSO_SOCKACT_IDLE;
+    ESP_LOGD(TAG,"SOCK%u Idle",id);
 
     if(hso_scm->drv.set_sock_global_intr_enable(hso_scm,id,true)!=ESP_OK){
         ESP_LOGE(TAG,"fail to enable sock%u global interrupt",id);
@@ -160,7 +162,7 @@ static esp_err_t hwss_hso_scm_start(hwss_hso_scm_t *hso_scm){
     
     if(hso_scm->hir){
         ESP_GOTO_ON_ERROR(hso_scm->drv.set_sock_global_intr_enable_all(hso_scm,false),err,TAG,"fail to disable global socket intr");
-        for(hwss_sockid_t id=0;id<hso_scm->en_sock_num;id++){
+        for(hwss_sockid_t id=0;id<hso_scm->en_socknum;id++){
             hso_scm->sockact_sta_list[id]=HWSS_HSO_SOCKACT_IDLE;
             ESP_GOTO_ON_ERROR(hso_scm->drv.clear_sock_intr(hso_scm,id),err,TAG,"cannot clear sock%u intr",id);
             ESP_GOTO_ON_ERROR(hso_scm->drv.set_sock_intr_enable(hso_scm,id,true),err,TAG,"cannot enable sock%u intr",id);
@@ -170,7 +172,7 @@ static esp_err_t hwss_hso_scm_start(hwss_hso_scm_t *hso_scm){
         ESP_GOTO_ON_ERROR(hso_scm->drv.set_sock_global_intr_enable_all(hso_scm,true),err,TAG,"fail to enable global socket intr");
     }
     else{
-        for(hwss_sockid_t id=0;id<hso_scm->en_sock_num;id++){
+        for(hwss_sockid_t id=0;id<hso_scm->en_socknum;id++){
             hso_scm->sockact_sta_list[id]=HWSS_HSO_SOCKACT_GENERIC;
             ESP_GOTO_ON_ERROR(hso_scm->drv.clear_sock_intr(hso_scm,id),err,TAG,"cannot clear sock%u intr",id);
             ESP_GOTO_ON_ERROR(hso_scm->drv.set_sock_intr_enable(hso_scm,id,true),err,TAG,"cannot enable sock%u intr",id);
@@ -191,7 +193,6 @@ static esp_err_t hwss_hso_scm_stop(hwss_hso_scm_t *hso_scm){
         return ret;
 
     if(hso_scm->hir){
-        ESP_GOTO_ON_ERROR(hso_scm->hir->stop(hso_scm->hir),err,TAG,"fail to stop hir");
         ESP_GOTO_ON_ERROR(hso_scm->hir->unregister_handler(hso_scm->hir,hwss_hso_scm_ir_handler),err,TAG,"fail to unregister handler");
         if(esp_timer_is_active(hso_scm->sock_polling_timer))
             ESP_GOTO_ON_ERROR(esp_timer_stop(hso_scm->sock_polling_timer),err,TAG,"fail to stop sock polling timer");
@@ -256,7 +257,7 @@ hwss_hso_scm_t *hwss_hso_scm_new(esp_event_loop_handle_t elp_hdl, hwss_hso_t *hs
     ret->sockact_sta_list=calloc(config->sock_total_num,sizeof(hwss_hso_sockact_sta_t));
     ESP_GOTO_ON_FALSE(ret->sockact_sta_list,NULL,err,TAG,"fail to calloc sockact_sta_list");
 
-    ret->en_sock_num=config->en_sock_num;
+    ret->en_socknum=config->en_socknum;
     ret->elp_hdl=elp_hdl;
 
     ret->sock_polling_period_ms=config->sock_polling_period_ms;

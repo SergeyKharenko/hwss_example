@@ -82,11 +82,32 @@ static void hwss_event_handler(void *arg, esp_event_base_t event_base,
         ESP_LOGW(TAG,"PING FAIL!");
         break;
 
+    case HWSS_INTER_EVENT_HSO_TIMEOUT:
+        ESP_LOGW(TAG,"HSO TIMEOUT");
+        break;
+    
+    case HWSS_INTER_EVENT_HSO_RECV:
+        break;
+
+    case HWSS_INTER_EVENT_HSO_SEND_OK:
+        ESP_LOGI(TAG,"SEND OK");
+        break;
+
+    case HWSS_INTER_EVENT_HIR_TRIGGER:
+        break;
+
     default:
-        ESP_LOGE(TAG,"CCC");
+        ESP_LOGE(TAG,"CUS:%lX",event_id);
         break;
     }
+}
 
+static void recv_handler(void *arg, esp_event_base_t event_base,
+                        int32_t event_id, void *event_data){
+    uint16_t len=0;
+    hso->get_rx_length(hso,0,&len);
+    len=hwss_ntohs(len);
+    ESP_LOGI(TAG,"RECV: %04X",len);
 }
 
 void app_main(void)
@@ -119,16 +140,20 @@ void app_main(void)
         .tri=HWSS_TRIGGER_NEGEDGE
     };
 
-    static uint8_t sz_cfg[]={2,2,2,2};
+    static uint8_t sz_cfg[]={HWSS_HSO_WIZNET_BUFFSIZE_2KB,HWSS_HSO_WIZNET_BUFFSIZE_2KB,
+                            HWSS_HSO_WIZNET_BUFFSIZE_2KB,HWSS_HSO_WIZNET_BUFFSIZE_2KB,
+                            HWSS_HSO_WIZNET_BUFFSIZE_0KB,HWSS_HSO_WIZNET_BUFFSIZE_0KB,
+                            HWSS_HSO_WIZNET_BUFFSIZE_0KB,HWSS_HSO_WIZNET_BUFFSIZE_0KB};
 
     hwss_hso_config_t scfg={
-        .en_sock_num=4,
-        .rxbuf_size_kb=sz_cfg,
-        .txbuf_size_kb=sz_cfg,
+        .en_socknum=4,
         .irq_inter_time_us=10,
         .sock_active_threshold_ms=1000,
         .sock_polling_period_ms=5
     };
+
+    memcpy(scfg.tx_buffsize_kb,sz_cfg,4);
+    memcpy(scfg.rx_buffsize_kb,sz_cfg,4);
 
     // hwss_io_t *io=hwss_io_new_w5500(HWSS_IO_SPI,&cfg);
     // hwss_phy_t *phy=hwss_phy_new_w5500(io,&pcfg);
@@ -146,31 +171,37 @@ void app_main(void)
     esp_event_loop_handle_t hdl;
     esp_event_loop_create(&largs,&hdl);
     
-    io=hwss_io_new_w5100s(HWSS_IO_SPI,&cfg);
-    hir=hwss_hir_new(hdl,&ircfg);
-    phy=hwss_phy_new_w5100s(hdl,io,&pcfg);
-    mac=hwss_mac_new_w5100s(io,&mcfg);
-    hnet=hwss_hnet_new_w5100s(hdl,io,&ncfg);
-    hso=hwss_hso_new_w5100s(hdl,io,hir,&scfg);
-    hsl=hwss_hsl_new_w5100s(hdl,io,&lcfg);
-
-    // io=hwss_io_new_w5500(HWSS_IO_SPI,&cfg);
+    // io=hwss_io_new_w5100s(HWSS_IO_SPI,&cfg);
     // hir=hwss_hir_new(hdl,&ircfg);
-    // phy=hwss_phy_new_w5500(hdl,io,&pcfg);
-    // mac=hwss_mac_new_w5500(io,&mcfg);
-    // hnet=hwss_hnet_new_w5500(hdl,io,&ncfg);
-    // hso=hwss_hso_new_w5500(hdl,io,hir,&scfg);
+    // phy=hwss_phy_new_w5100s(hdl,io,&pcfg);
+    // mac=hwss_mac_new_w5100s(io,&mcfg);
+    // hnet=hwss_hnet_new_w5100s(hdl,io,&ncfg);
+    // hso=hwss_hso_new_w5100s(hdl,io,hir,&scfg);
+    // hsl=hwss_hsl_new_w5100s(hdl,io,&lcfg);
+
+    io=hwss_io_new_w5500(HWSS_IO_SPI,&cfg);
+    hir=hwss_hir_new(hdl,&ircfg);
+    phy=hwss_phy_new_w5500(hdl,io,&pcfg);
+    mac=hwss_mac_new_w5500(io,&mcfg);
+    hnet=hwss_hnet_new_w5500(hdl,io,&ncfg);
+    hso=hwss_hso_new_w5500(hdl,io,hir,&scfg);
 
     esp_event_handler_register_with(hdl,HWSS_INTER_EVENT,HWSS_EVENT_ANY_ID,hwss_event_handler,NULL);
+    esp_event_handler_register_with(hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HSO_RECV,recv_handler,NULL);
+    gpio_install_isr_service(0);
 
     io->init(io);
     phy->init(phy);
     mac->init(mac);
     hnet->init(hnet);
     hso->init(hso);
-    hsl->init(hsl);
+    hir->init(hir);
+    // hsl->init(hsl);
     
     phy->start(phy);
+    hir->start(hir);
+    hnet->start(hnet);
+    hso->start(hso);
     // hsl->start(hsl);
 
     // uint8_t ver=0;
@@ -182,19 +213,88 @@ void app_main(void)
     mac->get_addr(mac,mac_res);
     // W5500_getSHAR(io,mac_res);
 
-    ESP_LOGI(TAG,"MAC: %X:%X:%X:%X:%X:%X",mac_res[0],mac_res[1],mac_res[2],mac_res[3],mac_res[4],mac_res[5]);
+    ESP_LOGI(TAG,"MAC: %02X:%02X:%02X:%02X:%02X:%02X",mac_res[0],mac_res[1],mac_res[2],mac_res[3],mac_res[4],mac_res[5]);
 
-    hwss_ip_addr_t ip={192,168,0,10};
-    hwss_ip_addr_t gip={192,168,0,1};
+    hwss_ip_addr_t ip={10,0,0,5};
+    hwss_ip_addr_t gip={10,0,0,1};
     hwss_ip_addr_t mask={255,255,255,0};
+
+    hwss_hso_wiznet_sockmode_opt_t smopt={
+        .nodelay_ack=true
+    };
 
     hnet->set_source_addr(hnet,ip);
     hnet->set_gateway_addr(hnet,gip);
     hnet->set_subnet_mask(hnet,mask);
 
+
+    /////// TCP TEST /////////
+    // hwss_proto_t pro=HWSS_PROTO_TCP;
+    // hwss_port_t sport=hwss_htons(5590);
+    // hso->set_sock_proto(hso,0,&pro);
+    // hso->set_sock_source_port(hso,0,&sport);
+    // hso->set_sockmode_opt(hso,0,&smopt);
+
+    // vTaskDelay(pdMS_TO_TICKS(3000));
+
+    // hso->ctrl_sock(hso,0,HWSS_HSO_SOCKCTRL_OPEN);
+
+    // hwss_hso_socksta_t socksta=0;
+    // while(1){
+    //     hso->get_sock_state(hso,0,&socksta);
+    //     if(socksta==HWSS_HSO_SOCK_TCP_INIT)
+    //         break;
+    //     vTaskDelay(pdMS_TO_TICKS(10));
+    // }
+
+    // ESP_LOGI(TAG,"sock opened!");
+
+    // hso->ctrl_sock(hso,0,HWSS_HSO_SOCKCTRL_LISTEN);
+    // while(1){
+    //     hso->get_sock_state(hso,0,&socksta);
+    //     if(socksta==HWSS_HSO_SOCK_TCP_LISTEN)
+    //         break;
+    //     vTaskDelay(pdMS_TO_TICKS(10));
+    // }
+    // ESP_LOGI(TAG,"sock listening");
+
+    // while(1){
+    //     hso->get_sock_state_raw(hso,0,&socksta);
+    //     ESP_LOGI(TAG,"STA: %02X",socksta);
+    //     vTaskDelay(pdMS_TO_TICKS(500));
+    // }
+
+
+    /////// UDP TEST /////////
     hwss_proto_t pro=HWSS_PROTO_UDP;
+    hwss_port_t sport=hwss_htons(5590);
+
+    hwss_ip_addr_t destip={10,0,0,10};
+    hwss_port_t disport=hwss_htons(5900);
+
     hso->set_sock_proto(hso,0,&pro);
+    hso->set_sock_source_port(hso,0,&sport);
+    hso->set_sock_dest_addr(hso,0,destip);
+    hso->set_sock_dest_port(hso,0,&disport);
+
     hso->ctrl_sock(hso,0,HWSS_HSO_SOCKCTRL_OPEN);
+
+    hwss_hso_socksta_t socksta=0;
+    while(1){
+        hso->get_sock_state(hso,0,&socksta);
+        if(socksta==HWSS_HSO_SOCK_OPENED)
+            break;
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+
+    ESP_LOGI(TAG,"sock opened!");
+
+    // uint8_t data[]={'a','v','e','o'};
+    // while(1){
+    //     hso->write_tx_buffer(hso,0,data,4);
+    //     hso->ctrl_sock(hso,0,HWSS_HSO_SOCKCTRL_SEND);
+    //     vTaskDelay(pdMS_TO_TICKS(1000));
+    // }
 
     // hwss_ip_addr_t pip={192,168,0,24};
     // uint16_t pid=0;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "hwss_opt.h"
 #include "hwss_io.h"
 #include "hwss_type.h"
 
@@ -34,9 +35,9 @@ typedef enum{
 }hwss_hso_sockctrl_t;
 
 typedef struct{
-    uint8_t     en_sock_num;
-    uint8_t     *txbuf_size_kb;
-    uint8_t     *rxbuf_size_kb;
+    uint8_t     en_socknum;
+    uint8_t     tx_buffsize_kb[HWSS_SOCKNUM_MAX];
+    uint8_t     rx_buffsize_kb[HWSS_SOCKNUM_MAX];
 
     uint16_t    irq_inter_time_us;
 
@@ -61,6 +62,8 @@ struct hwss_hso_s{
 
     esp_err_t (*write_tx_buffer)(hwss_hso_t *hso, hwss_sockid_t id, const uint8_t *data, uint16_t len);
     esp_err_t (*read_rx_buffer)(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *data, uint16_t len);
+    
+    esp_err_t (*get_tx_free_length)(hwss_hso_t *hso, hwss_sockid_t id, uint16_t *len);
     esp_err_t (*get_rx_length)(hwss_hso_t *hso, hwss_sockid_t id, uint16_t *len);
 
     esp_err_t (*set_sock_proto)(hwss_hso_t *hso, hwss_sockid_t id, const hwss_proto_t *proto);
@@ -89,8 +92,7 @@ struct hwss_hso_s{
 
     esp_err_t (*get_sock_state)(hwss_hso_t *hso, hwss_sockid_t id, hwss_hso_socksta_t *sta);
     esp_err_t (*get_sock_state_raw)(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *sta);
-
-
+    
 };
 
 typedef struct{

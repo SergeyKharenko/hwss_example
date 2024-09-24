@@ -9,7 +9,7 @@ static const char *TAG = "hwss_hir";
 IRAM_ATTR static void hwss_hir_isr_handler(void *args){
     hwss_hir_t *hir=(hwss_hir_t *)args;
     BaseType_t unblock=pdTRUE;
-    esp_event_isr_post_to(hir->elp_hdl,HWSS_INTER_EVENT,HWSS_HIR_EVENTBIT_TRIGGER,NULL,0,&unblock);
+    esp_event_isr_post_to(hir->elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HIR_TRIGGER,NULL,0,&unblock);
 }
 
 static esp_err_t hwss_hir_init(hwss_hir_t *hir){
@@ -74,11 +74,11 @@ err:
 }
 
 static esp_err_t hwss_hir_register_handler(hwss_hir_t *hir, esp_event_handler_t handler, void *args){
-    return esp_event_handler_register_with(hir->elp_hdl,HWSS_INTER_EVENT,HWSS_HIR_EVENTBIT_TRIGGER,handler,args);
+    return esp_event_handler_register_with(hir->elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HIR_TRIGGER,handler,args);
 }
 
 static esp_err_t hwss_hir_unregister_handler(hwss_hir_t *hir, esp_event_handler_t handler){
-    return esp_event_handler_unregister_with(hir->elp_hdl,HWSS_INTER_EVENT,HWSS_HIR_EVENTBIT_TRIGGER,handler);
+    return esp_event_handler_unregister_with(hir->elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HIR_TRIGGER,handler);
 }
 
 hwss_hir_t *hwss_hir_new(esp_event_loop_handle_t elp_hdl, const hwss_hir_config_t *config){

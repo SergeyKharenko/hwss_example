@@ -353,6 +353,18 @@ inline esp_err_t W5500_getSn_KPALVTR(hwss_io_t *io, uint8_t sn, uint8_t *kpalvt)
     return io->read(io,0,W5500_REG_Sn_KPALVTR(sn),kpalvt);
 }
 
+///////////////////////////////////
+// Socket N Buffer I/O function //
+///////////////////////////////////
+
+inline esp_err_t W5500_writeSn_TXBUF(hwss_io_t *io, uint8_t sn, uint16_t addr, const uint8_t *data, uint16_t len){
+    return io->write_buf(io,0,(W5500_TXBUF_BLOCK(sn)<<3)+(addr<<8),data,len);
+}
+
+inline esp_err_t W5500_readSn_RXBUF(hwss_io_t *io, uint8_t sn, uint16_t addr, uint8_t *data, uint16_t len){
+    return io->read_buf(io,0,(W5500_RXBUF_BLOCK(sn)<<3)+(addr<<8),data,len);
+}
+
 #ifdef __cplusplus
 }
 #endif
