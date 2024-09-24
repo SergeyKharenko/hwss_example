@@ -265,28 +265,28 @@ err:
 
 static esp_err_t hwss_hnet_w5100s_set_ppp_sess_id(hwss_hnet_t *hnet, const uint16_t *id){
     esp_err_t ret=ESP_OK;
-    ESP_GOTO_ON_ERROR(W5100S_setPSIDR(hnet->io,id),err,TAG,"cannot write PSID");
+    ESP_GOTO_ON_ERROR(W5100S_setPSID(hnet->io,id),err,TAG,"cannot write PSID");
 err:
     return ret;
 }
 
 static esp_err_t hwss_hnet_w5100s_get_ppp_sess_id(hwss_hnet_t *hnet, uint16_t *id){
     esp_err_t ret=ESP_OK;
-    ESP_GOTO_ON_ERROR(W5100S_getPSIDR(hnet->io,id),err,TAG,"cannot read PSID");
+    ESP_GOTO_ON_ERROR(W5100S_getPSID(hnet->io,id),err,TAG,"cannot read PSID");
 err:
     return ret;
 }
 
 static esp_err_t hwss_hnet_w5100s_set_ppp_max_recv_unit(hwss_hnet_t *hnet, const uint16_t *unit){
     esp_err_t ret=ESP_OK;
-    ESP_GOTO_ON_ERROR(W5100S_setPMRUR(hnet->io,unit),err,TAG,"cannot write PMRU");
+    ESP_GOTO_ON_ERROR(W5100S_setPMRU(hnet->io,unit),err,TAG,"cannot write PMRU");
 err:
     return ret;
 }
 
 static esp_err_t hwss_hnet_w5100s_get_ppp_max_recv_unit(hwss_hnet_t *hnet, uint16_t *unit){
     esp_err_t ret=ESP_OK;
-    ESP_GOTO_ON_ERROR(W5100S_getPMRUR(hnet->io,unit),err,TAG,"cannot read PMRU");
+    ESP_GOTO_ON_ERROR(W5100S_getPMRU(hnet->io,unit),err,TAG,"cannot read PMRU");
 err:
     return ret;
 }

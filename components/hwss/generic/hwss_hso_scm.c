@@ -196,6 +196,16 @@ static esp_err_t hwss_hso_scm_stop(hwss_hso_scm_t *hso_scm){
         ESP_GOTO_ON_ERROR(hso_scm->hir->unregister_handler(hso_scm->hir,hwss_hso_scm_ir_handler),err,TAG,"fail to unregister handler");
         if(esp_timer_is_active(hso_scm->sock_polling_timer))
             ESP_GOTO_ON_ERROR(esp_timer_stop(hso_scm->sock_polling_timer),err,TAG,"fail to stop sock polling timer");
+        
+        if(hso_scm->active_sock_num!=0){
+            for(hwss_sockid_t id=0;id<hso_scm->en_socknum;id++){
+                if(hso_scm->sockact_sta_list[id]==HWSS_HSO_SOCKACT_ACTIVE){
+                    if(esp_timer_is_active(hso_scm->socktimer_list[id]))
+                        ESP_GOTO_ON_ERROR(esp_timer_stop(hso_scm->socktimer_list[id]),
+                                            err,TAG,"fail to stop sock active timer");
+                }
+            }
+        }
     }
     else
         ESP_GOTO_ON_ERROR(esp_timer_stop(hso_scm->sock_polling_timer),err,TAG,"fail to stop sock polling timer");
@@ -299,7 +309,7 @@ hwss_hso_scm_t *hwss_hso_scm_new(esp_event_loop_handle_t elp_hdl, hwss_hso_t *hs
         .callback=hwss_hso_scm_sock_polling_timer_cb,
         .skip_unhandled_events=true
     };
-    ESP_GOTO_ON_FALSE(esp_timer_create(&timer_arg,&ret->sock_polling_timer)==ESP_OK,NULL,err,TAG,"cannot create polling timer");
+    ESP_GOTO_ON_FALSE(esp_timer_create(&timer_arg,&(ret->sock_polling_timer))==ESP_OK,NULL,err,TAG,"cannot create polling timer");
 
 err:
     return ret;

@@ -62,6 +62,7 @@ struct hwss_hso_s{
 
     esp_err_t (*write_tx_buffer)(hwss_hso_t *hso, hwss_sockid_t id, const uint8_t *data, uint16_t len);
     esp_err_t (*read_rx_buffer)(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *data, uint16_t len);
+    esp_err_t (*drop_rx_buffer)(hwss_hso_t *hso, hwss_sockid_t id, uint16_t len);
     
     esp_err_t (*get_tx_free_length)(hwss_hso_t *hso, hwss_sockid_t id, uint16_t *len);
     esp_err_t (*get_rx_length)(hwss_hso_t *hso, hwss_sockid_t id, uint16_t *len);

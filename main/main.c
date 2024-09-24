@@ -102,16 +102,21 @@ static void hwss_event_handler(void *arg, esp_event_base_t event_base,
     }
 }
 
+static uint8_t *cache;
+
 static void recv_handler(void *arg, esp_event_base_t event_base,
                         int32_t event_id, void *event_data){
     uint16_t len=0;
     hso->get_rx_length(hso,0,&len);
-    len=hwss_ntohs(len);
-    ESP_LOGI(TAG,"RECV: %04X",len);
+
+    hso->read_rx_buffer(hso,0,cache,len);
+    ESP_LOGI(TAG,"IP:%u.%u.%u.%u",cache[0],cache[1],cache[2],cache[3]);
+    hso->ctrl_sock(hso,0,HWSS_HSO_SOCKCTRL_RECV);
 }
 
 void app_main(void)
 {
+    cache=heap_caps_malloc(1024,MALLOC_CAP_DMA);
     gpio_config_t gcfg={
         .mode=GPIO_MODE_OUTPUT,
         .pin_bit_mask=1ull<<GPIO_RST_PIN
@@ -171,20 +176,20 @@ void app_main(void)
     esp_event_loop_handle_t hdl;
     esp_event_loop_create(&largs,&hdl);
     
-    // io=hwss_io_new_w5100s(HWSS_IO_SPI,&cfg);
-    // hir=hwss_hir_new(hdl,&ircfg);
-    // phy=hwss_phy_new_w5100s(hdl,io,&pcfg);
-    // mac=hwss_mac_new_w5100s(io,&mcfg);
-    // hnet=hwss_hnet_new_w5100s(hdl,io,&ncfg);
-    // hso=hwss_hso_new_w5100s(hdl,io,hir,&scfg);
-    // hsl=hwss_hsl_new_w5100s(hdl,io,&lcfg);
-
-    io=hwss_io_new_w5500(HWSS_IO_SPI,&cfg);
+    io=hwss_io_new_w5100s(HWSS_IO_SPI,&cfg);
     hir=hwss_hir_new(hdl,&ircfg);
-    phy=hwss_phy_new_w5500(hdl,io,&pcfg);
-    mac=hwss_mac_new_w5500(io,&mcfg);
-    hnet=hwss_hnet_new_w5500(hdl,io,&ncfg);
-    hso=hwss_hso_new_w5500(hdl,io,hir,&scfg);
+    phy=hwss_phy_new_w5100s(hdl,io,&pcfg);
+    mac=hwss_mac_new_w5100s(io,&mcfg);
+    hnet=hwss_hnet_new_w5100s(hdl,io,&ncfg);
+    hso=hwss_hso_new_w5100s(hdl,io,hir,&scfg);
+    hsl=hwss_hsl_new_w5100s(hdl,io,&lcfg);
+
+    // io=hwss_io_new_w5500(HWSS_IO_SPI,&cfg);
+    // hir=hwss_hir_new(hdl,&ircfg);
+    // phy=hwss_phy_new_w5500(hdl,io,&pcfg);
+    // mac=hwss_mac_new_w5500(io,&mcfg);
+    // hnet=hwss_hnet_new_w5500(hdl,io,&ncfg);
+    // hso=hwss_hso_new_w5500(hdl,io,hir,&scfg);
 
     esp_event_handler_register_with(hdl,HWSS_INTER_EVENT,HWSS_EVENT_ANY_ID,hwss_event_handler,NULL);
     esp_event_handler_register_with(hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HSO_RECV,recv_handler,NULL);
@@ -200,8 +205,6 @@ void app_main(void)
     
     phy->start(phy);
     hir->start(hir);
-    hnet->start(hnet);
-    hso->start(hso);
     // hsl->start(hsl);
 
     // uint8_t ver=0;
@@ -215,8 +218,8 @@ void app_main(void)
 
     ESP_LOGI(TAG,"MAC: %02X:%02X:%02X:%02X:%02X:%02X",mac_res[0],mac_res[1],mac_res[2],mac_res[3],mac_res[4],mac_res[5]);
 
-    hwss_ip_addr_t ip={10,0,0,5};
-    hwss_ip_addr_t gip={10,0,0,1};
+    hwss_ip_addr_t ip={192,168,0,10};
+    hwss_ip_addr_t gip={192,168,0,1};
     hwss_ip_addr_t mask={255,255,255,0};
 
     hwss_hso_wiznet_sockmode_opt_t smopt={
@@ -233,7 +236,7 @@ void app_main(void)
     // hwss_port_t sport=hwss_htons(5590);
     // hso->set_sock_proto(hso,0,&pro);
     // hso->set_sock_source_port(hso,0,&sport);
-    // hso->set_sockmode_opt(hso,0,&smopt);
+    // // hso->set_sockmode_opt(hso,0,&smopt);
 
     // vTaskDelay(pdMS_TO_TICKS(3000));
 
@@ -244,6 +247,7 @@ void app_main(void)
     //     hso->get_sock_state(hso,0,&socksta);
     //     if(socksta==HWSS_HSO_SOCK_TCP_INIT)
     //         break;
+    //     ESP_LOGI(TAG,"STA: %02X",socksta);
     //     vTaskDelay(pdMS_TO_TICKS(10));
     // }
 
@@ -254,6 +258,7 @@ void app_main(void)
     //     hso->get_sock_state(hso,0,&socksta);
     //     if(socksta==HWSS_HSO_SOCK_TCP_LISTEN)
     //         break;
+    //     ESP_LOGI(TAG,"STA: %02X",socksta);
     //     vTaskDelay(pdMS_TO_TICKS(10));
     // }
     // ESP_LOGI(TAG,"sock listening");
@@ -264,13 +269,12 @@ void app_main(void)
     //     vTaskDelay(pdMS_TO_TICKS(500));
     // }
 
-
     /////// UDP TEST /////////
     hwss_proto_t pro=HWSS_PROTO_UDP;
-    hwss_port_t sport=hwss_htons(5590);
+    hwss_port_t sport=5590;
 
-    hwss_ip_addr_t destip={10,0,0,10};
-    hwss_port_t disport=hwss_htons(5900);
+    hwss_ip_addr_t destip={192,168,0,20};
+    hwss_port_t disport=5900;
 
     hso->set_sock_proto(hso,0,&pro);
     hso->set_sock_source_port(hso,0,&sport);

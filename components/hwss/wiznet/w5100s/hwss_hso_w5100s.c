@@ -58,12 +58,21 @@ typedef union{
 
 typedef struct{
     hwss_hso_t          super;
-    
+
     uint8_t             txbuf_size_kb[W5100S_SOCKNUM];
     uint8_t             rxbuf_size_kb[W5100S_SOCKNUM];
-    uint16_t            irq_inter_tick;
+    uint16_t            txbuf_base_addr[W5100S_SOCKNUM];
+    uint16_t            rxbuf_base_addr[W5100S_SOCKNUM];
+    uint16_t            txbuf_mask[W5100S_SOCKNUM];
+    uint16_t            rxbuf_mask[W5100S_SOCKNUM];
 
+    uint16_t            irq_inter_tick;
+    
+    uint8_t             en_socknum;
     bool                is_started;
+
+    uint8_t             *dma_gintr;
+    uint8_t             *dma_sintr;
 }hwss_hso_w5100s_t;
 
 ////////
@@ -72,10 +81,10 @@ typedef struct{
 static esp_err_t hwss_hso_scm_w5100s_get_sock_global_intr(hwss_hso_scm_t *hso_scm, uint8_t *intr){
     esp_err_t ret=ESP_OK;
     hwss_hso_t *hso=hso_scm->hso;
-    uint8_t stat;
+    hwss_hso_w5100s_t *hso_w5100s=__containerof(hso,hwss_hso_w5100s_t,super);
 
-    ESP_GOTO_ON_ERROR(W5100S_getIR(hso->io,&stat),err,TAG,"cannot read IR");
-    *intr=stat&0x0F;
+    ESP_GOTO_ON_ERROR(W5100S_getIR(hso->io,hso_w5100s->dma_gintr),err,TAG,"cannot read IR");
+    *intr=(*hso_w5100s->dma_gintr)&0x0F;
 err:
     return ret;
 }
@@ -115,9 +124,11 @@ err:
 static esp_err_t hwss_hso_scm_w5100s_get_sock_intr(hwss_hso_scm_t *hso_scm, hwss_sockid_t id, uint8_t *intr){
     esp_err_t ret=ESP_OK;
     hwss_hso_t *hso=hso_scm->hso;
-    uint8_t snir=0;
+    hwss_hso_w5100s_t *hso_w5100s=__containerof(hso,hwss_hso_w5100s_t,super);
 
-    ESP_GOTO_ON_ERROR(W5100S_getSn_IR(hso->io,id,&snir),err,TAG,"cannot read Sn_IR");
+    ESP_GOTO_ON_ERROR(W5100S_getSn_IR(hso->io,id,hso_w5100s->dma_sintr),err,TAG,"cannot read Sn_IR");
+
+    uint8_t snir=*hso_w5100s->dma_sintr;
 
     if(snir&W5100S_Sn_IR_SENDOK)
         *intr|= HWSS_HSO_INTR_SEND_OK;
@@ -173,7 +184,7 @@ static esp_err_t hwss_hso_w5100s_init(hwss_hso_t *hso){
 
     ESP_GOTO_ON_ERROR(W5100S_setINTPTMR(hso->io,&(hso_w5100s->irq_inter_tick)),err,TAG,"cannot write INTPTMR");
 
-    for(hwss_sockid_t id=0;id<W5100S_SOCKNUM;id++){
+    for(hwss_sockid_t id=0;id<hso_w5100s->en_socknum;id++){
         ESP_GOTO_ON_ERROR(W5100S_setSn_MR(hso->io,id,&w5100s_sock_mode_default),err,TAG,"cannot write Sn_MR");
         ESP_GOTO_ON_ERROR(W5100S_setSn_PORT(hso->io,id,&w5100s_sock_port_defualt),err,TAG,"cannot write Sn_PORT");
         ESP_GOTO_ON_ERROR(W5100S_setSn_DHAR(hso->io,id,w5100s_sock_dest_mac_addr_default),err,TAG,"cannot write Sn_DHAR");
@@ -182,7 +193,7 @@ static esp_err_t hwss_hso_w5100s_init(hwss_hso_t *hso){
         ESP_GOTO_ON_ERROR(W5100S_setSn_MSSR(hso->io,id,&w5100s_sock_mss_default),err,TAG,"cannot write Sn_MSSR");
         ESP_GOTO_ON_ERROR(W5100S_setSn_RXBUF_SIZE(hso->io,id,&(hso_w5100s->rxbuf_size_kb[id])),err,TAG,"cannot write Sn_RXBUF_SIZE");
         ESP_GOTO_ON_ERROR(W5100S_setSn_TXBUF_SIZE(hso->io,id,&(hso_w5100s->txbuf_size_kb[id])),err,TAG,"cannot write Sn_TXBUF_SIZE");
-        ESP_GOTO_ON_ERROR(W5100S_setSn_FRAGR(hso->io,id,&w5100s_sock_frag_default),err,TAG,"cannot write Sn_FRAGR");
+        ESP_GOTO_ON_ERROR(W5100S_setSn_FRAG(hso->io,id,&w5100s_sock_frag_default),err,TAG,"cannot write Sn_FRAGR");
         ESP_GOTO_ON_ERROR(W5100S_setSn_KPALVTR(hso->io,id,&w5100s_sock_keepalive_tick_default),err,TAG,"cannot write Sn_KPALVTR");
     }
 
@@ -235,7 +246,6 @@ err:
 
 static esp_err_t hwss_hso_w5100s_ctrl_sock(hwss_hso_t *hso, hwss_sockid_t id, hwss_hso_sockctrl_t ctrl){
     esp_err_t ret=ESP_OK;
-    hwss_hso_w5100s_t *hso_w5100s=__containerof(hso,hwss_hso_w5100s_t,super);
     uint8_t sncr=0;
 
     while(1){
@@ -270,16 +280,71 @@ err:
 static esp_err_t hwss_hso_w5100s_write_tx_buffer(hwss_hso_t *hso, hwss_sockid_t id, const uint8_t *data, uint16_t len){
     esp_err_t ret=ESP_OK;
     hwss_hso_w5100s_t *hso_w5100s=__containerof(hso,hwss_hso_w5100s_t,super);
-    uint16_t ptr=0;
-    
-    ESP_GOTO_ON_ERROR(W5100S_getSn_TX_WR(hso->io,id,&ptr),err,TAG,"cannot get tx pointer");
-    
+
+    if(len==0)
+        return ret;
+
+    uint16_t txwr=0;
+    ESP_GOTO_ON_ERROR(W5100S_getSn_TX_WR(hso->io,id,&txwr),err,TAG,"cannot read Sn_TX_WR");
+    ESP_GOTO_ON_ERROR(hso->io->write_buf(hso->io,0,((hso_w5100s->txbuf_mask[id])&txwr)+(hso_w5100s->txbuf_base_addr[id]),
+                        data,len),err,TAG,"cannot write Sn_TXBUF");
+
+    txwr+=len;
+    ESP_GOTO_ON_ERROR(W5100S_setSn_TX_WR(hso->io,id,&txwr),err,TAG,"cannot update Sn_TX_WR");
+
 err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5100s_read_rx_buffer(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *data, uint16_t len);
-static esp_err_t hwss_hso_w5100s_get_rx_length(hwss_hso_t *hso, hwss_sockid_t id, uint16_t *len);
+static esp_err_t hwss_hso_w5100s_read_rx_buffer(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *data, uint16_t len){
+    esp_err_t ret=ESP_OK;
+    hwss_hso_w5100s_t *hso_w5100s=__containerof(hso,hwss_hso_w5100s_t,super);
+
+    if(len==0)
+        return ret;
+    
+    uint16_t rxrd=0;
+    ESP_GOTO_ON_ERROR(W5100S_getSn_RX_RD(hso->io,id,&rxrd),err,TAG,"cannot read Sn_RX_RD");
+    ESP_GOTO_ON_ERROR(hso->io->read_buf(hso->io,0,((hso_w5100s->rxbuf_mask[id])&rxrd)+(hso_w5100s->rxbuf_base_addr[id]),
+                        data,len),err,TAG,"cannot read Sn_RXBUF");
+
+    ESP_LOGW(TAG,"RXRD:%X",rxrd);
+
+    rxrd+=len;
+    ESP_GOTO_ON_ERROR(W5100S_setSn_RX_RD(hso->io,id,&rxrd),err,TAG,"cannot update Sn_RX_RD");
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hso_w5100s_drop_rx_buffer(hwss_hso_t *hso, hwss_sockid_t id, uint16_t len){
+    esp_err_t ret=ESP_OK;
+
+    if(len==0)
+        return ret;
+
+    uint16_t rxrd=0;
+    ESP_GOTO_ON_ERROR(W5100S_getSn_RX_RD(hso->io,id,&rxrd),err,TAG,"cannot read Sn_RX_RD");
+
+    rxrd+=len;
+    ESP_GOTO_ON_ERROR(W5100S_setSn_RX_RD(hso->io,id,&rxrd),err,TAG,"cannot update Sn_RX_RD");
+
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hso_w5100s_get_tx_free_length(hwss_hso_t *hso, hwss_sockid_t id, uint16_t *len){
+    esp_err_t ret=ESP_OK;
+    ESP_GOTO_ON_ERROR(W5100S_getSn_TX_FSR(hso->io,id,len),err,TAG,"cannot read Sn_TX_FSR");
+err:
+    return ret;
+}
+
+static esp_err_t hwss_hso_w5100s_get_rx_length(hwss_hso_t *hso, hwss_sockid_t id, uint16_t *len){
+    esp_err_t ret=ESP_OK;
+    ESP_GOTO_ON_ERROR(W5100S_getSn_RX_RSR(hso->io,id,len),err,TAG,"cannot read Sn_RX_RSR");
+err:
+    return ret;
+}
 
 static esp_err_t hwss_hso_w5100s_set_sock_proto(hwss_hso_t *hso, hwss_sockid_t id, const hwss_proto_t *proto){
     esp_err_t ret=ESP_OK;
@@ -552,7 +617,7 @@ hwss_hso_t *hwss_hso_new_w5100s(esp_event_loop_handle_t elp, hwss_io_t *io, hwss
     }
 
     ESP_GOTO_ON_FALSE(tx_cache_size_kb<=W5100S_SOCK_CACHE_SIZE_KB && rx_cache_size_kb<=W5100S_SOCK_CACHE_SIZE_KB,
-                        NULL,err,TAG,"sum of tx/rx cache size should not be over 16KB");
+                        NULL,err,TAG,"sum of tx/rx cache size should not be over 8KB");
 
     if(hir==NULL && config->sock_polling_period_ms<5)
         ESP_LOGW(TAG,"polling period too short might SERIOUSLY affects the execution of other tasks!");
@@ -566,6 +631,11 @@ hwss_hso_t *hwss_hso_new_w5100s(esp_event_loop_handle_t elp, hwss_io_t *io, hwss
     hso->super.start=hwss_hso_w5100s_start;
     hso->super.stop=hwss_hso_w5100s_stop;
     hso->super.ctrl_sock=hwss_hso_w5100s_ctrl_sock;
+    hso->super.write_tx_buffer=hwss_hso_w5100s_write_tx_buffer;
+    hso->super.read_rx_buffer=hwss_hso_w5100s_read_rx_buffer;
+    hso->super.drop_rx_buffer=hwss_hso_w5100s_drop_rx_buffer;
+    hso->super.get_rx_length=hwss_hso_w5100s_get_rx_length;
+    hso->super.get_tx_free_length=hwss_hso_w5100s_get_tx_free_length;
     hso->super.set_sock_proto=hwss_hso_w5100s_set_sock_proto;
     hso->super.get_sock_proto=hwss_hso_w5100s_get_sock_proto;
     hso->super.set_sockmode_opt=hwss_hso_w5100s_set_sockmode_opt;
@@ -586,9 +656,28 @@ hwss_hso_t *hwss_hso_new_w5100s(esp_event_loop_handle_t elp, hwss_io_t *io, hwss
     hso->super.get_sock_state_raw=hwss_hso_w5100s_get_sock_state_raw;
 
     hso->irq_inter_tick=config->irq_inter_time_us*25;
-    memcpy(hso->txbuf_size_kb,config->tx_buffsize_kb,W5100S_SOCKNUM);
-    memcpy(hso->rxbuf_size_kb,config->rx_buffsize_kb,W5100S_SOCKNUM);
+    hso->en_socknum=config->en_socknum;
+    memcpy(hso->txbuf_size_kb,config->tx_buffsize_kb,hso->en_socknum);
+    memcpy(hso->rxbuf_size_kb,config->rx_buffsize_kb,hso->en_socknum);
+    
+    hso->txbuf_base_addr[0]= _W5100S_IO_BASE_ + _W5100S_IO_TXBUF_;
+    hso->rxbuf_base_addr[0]= _W5100S_IO_BASE_ + _W5100S_IO_RXBUF_;
+    hso->txbuf_mask[0]=((uint16_t)(0x0001<<(hso->txbuf_size_kb[0]))<<10) - 0x0001;
+    hso->rxbuf_mask[0]=((uint16_t)(0x0001<<(hso->rxbuf_size_kb[0]))<<10) - 0x0001;
+
+    for(hwss_sockid_t id=1;id<hso->en_socknum;id++){
+        hso->txbuf_base_addr[id]=hso->txbuf_base_addr[id-1]+((uint16_t)(0x0001<<(hso->txbuf_size_kb[id-1]))<<10);
+        hso->rxbuf_base_addr[id]=hso->rxbuf_base_addr[id-1]+((uint16_t)(0x0001<<(hso->rxbuf_size_kb[id-1]))<<10);
+        hso->txbuf_mask[id]=((uint16_t)(0x0001<<(hso->txbuf_size_kb[id]))<<10) - 0x0001;
+        hso->rxbuf_mask[id]=((uint16_t)(0x0001<<(hso->rxbuf_size_kb[id]))<<10) - 0x0001;
+    }
+
     hso->is_started=false;
+
+    hso->dma_gintr=heap_caps_malloc(1,MALLOC_CAP_DMA);
+    hso->dma_sintr=heap_caps_malloc(1,MALLOC_CAP_DMA);
+
+    ESP_GOTO_ON_FALSE(hso->dma_gintr&&hso->dma_sintr,NULL,err,TAG,"cannot malloc dma cache");
 
     hwss_hso_scm_config_t scm_config={
         .en_socknum=config->en_socknum,
