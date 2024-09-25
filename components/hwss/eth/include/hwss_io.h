@@ -9,7 +9,7 @@
 #include "driver/uart.h"
 
 #include "esp_err.h"
-
+#include "hwss_sku.h"
 #include "hwss_type.h"
 
 typedef struct hwss_io_s hwss_io_t;
@@ -49,3 +49,5 @@ typedef struct{
     uart_port_t         port;
     uart_config_t       uart_cfg;
 }hwss_io_uart_config_t;
+
+hwss_io_t *hwss_io_new(hwss_sku_t sku, hwss_io_type_t io_type, void *io_config);

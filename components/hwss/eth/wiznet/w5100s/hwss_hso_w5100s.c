@@ -1,4 +1,5 @@
 #include <sys/cdefs.h>
+#include <machine/endian.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_check.h"
@@ -22,6 +23,7 @@ static const uint16_t   w5100s_sock_frag_default=            0x4000;
 static const char *TAG = "w5100s.hwss_hso";
 
 typedef union{
+    #if BYTE_ORDER == LITTLE_ENDIAN
     struct{
         uint8_t intr :4;
         uint8_t reserve :1;
@@ -29,10 +31,20 @@ typedef union{
         uint8_t unreach :1;
         uint8_t cnft :1;
     };
+    #else
+    struct{
+        uint8_t cnft :1;
+        uint8_t unreach :1;
+        uint8_t pppterm :1;
+        uint8_t reserve :1;
+        uint8_t intr :4;
+    };
+    #endif
     uint8_t val;
 }imr_reg_t;
 
 typedef union{
+    #if BYTE_ORDER == LITTLE_ENDIAN
     struct{
         uint8_t protocol :4;
         uint8_t reserve :1;
@@ -40,10 +52,20 @@ typedef union{
         uint8_t mf :1;
         uint8_t multi :1;
     };
+    #else
+    struct{
+        uint8_t multi :1;
+        uint8_t mf :1;
+        uint8_t nd_mc :1;
+        uint8_t reserve :1;
+        uint8_t protocol :4;
+    };
+    #endif
     uint8_t val;
 }sn_mr_reg_t;
 
 typedef union{
+    #if BYTE_ORDER == LITTLE_ENDIAN
     struct{
         uint8_t unib :1;
         uint8_t brdb :1;
@@ -53,6 +75,17 @@ typedef union{
         uint8_t mbblk :1;
         uint8_t reserve2 :1;
     };
+    #else
+    struct{
+        uint8_t reserve2 :1;
+        uint8_t mbblk :1;
+        uint8_t mmblk :1;
+        uint8_t ipv6blk :1;
+        uint8_t reserve1 :2;
+        uint8_t brdb :1;
+        uint8_t unib :1;
+    };
+    #endif
     uint8_t val;
 }sn_mr2_reg_t;
 
@@ -288,8 +321,19 @@ static esp_err_t hwss_hso_w5100s_write_tx_buffer(hwss_hso_t *hso, hwss_sockid_t 
 
     uint16_t txwr=0;
     ESP_GOTO_ON_ERROR(W5100S_getSn_TX_WR(hso->io,id,&txwr),err,TAG,"cannot read Sn_TX_WR");
-    ESP_GOTO_ON_ERROR(hso->io->write_buf(hso->io,0,((hso_w5100s->txbuf_mask[id])&txwr)+(hso_w5100s->txbuf_base_addr[id]),
-                        data,len),err,TAG,"cannot write Sn_TXBUF");
+
+    uint16_t bias=((hso_w5100s->txbuf_mask[id])&txwr);
+    uint16_t lspace=hso_w5100s->txbuf_size[id]-bias;
+    if(lspace<len){
+        uint16_t remain=len-lspace;
+        ESP_GOTO_ON_ERROR(hso->io->write_buf(hso->io,0,bias+(hso_w5100s->txbuf_base_addr[id]),
+                    data,lspace),err,TAG,"cannot write Sn_TXBUF");
+        ESP_GOTO_ON_ERROR(hso->io->write_buf(hso->io,0,(hso_w5100s->txbuf_base_addr[id]),
+                    data+lspace,remain),err,TAG,"cannot write Sn_TXBUF");
+    }
+    else
+        ESP_GOTO_ON_ERROR(hso->io->write_buf(hso->io,0,((hso_w5100s->txbuf_mask[id])&txwr)+(hso_w5100s->txbuf_base_addr[id]),
+                            data,len),err,TAG,"cannot write Sn_TXBUF");
 
     txwr+=len;
     ESP_GOTO_ON_ERROR(W5100S_setSn_TX_WR(hso->io,id,&txwr),err,TAG,"cannot update Sn_TX_WR");
@@ -313,16 +357,14 @@ static esp_err_t hwss_hso_w5100s_read_rx_buffer(hwss_hso_t *hso, hwss_sockid_t i
     if(lspace<len){
         uint16_t remain=len-lspace;
         ESP_GOTO_ON_ERROR(hso->io->read_buf(hso->io,0,bias+(hso_w5100s->rxbuf_base_addr[id]),
-            data,lspace),err,TAG,"cannot read Sn_RXBUF");
+                        data,lspace),err,TAG,"cannot read Sn_RXBUF");
         ESP_GOTO_ON_ERROR(hso->io->read_buf(hso->io,0,(hso_w5100s->rxbuf_base_addr[id]),
-            data+lspace,remain),err,TAG,"cannot read Sn_RXBUF");
-        rxrd=remain;
+                        data+lspace,remain),err,TAG,"cannot read Sn_RXBUF");
     }
-    else{
+    else
         ESP_GOTO_ON_ERROR(hso->io->read_buf(hso->io,0,bias+(hso_w5100s->rxbuf_base_addr[id]),
                     data,len),err,TAG,"cannot read Sn_RXBUF");
-        rxrd+=len;
-    }
+    rxrd+=len;
 
     uint16_t rxwr=0;
     W5100S_getSn_RX_WR(hso->io,id,&rxwr);

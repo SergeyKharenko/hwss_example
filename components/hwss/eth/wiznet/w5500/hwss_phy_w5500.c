@@ -1,11 +1,12 @@
 #include <stdatomic.h>
+#include <machine/endian.h>
 #include <sys/cdefs.h>
 #include "esp_check.h"
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "drv_w5500.h"
-#include "hwss_event.h"
+#include "hwss_eth_event.h"
 #include "hwss_phy_wiznet.h"
 
 static const char *TAG = "w5500.hwss_phy";
@@ -26,6 +27,7 @@ typedef struct{
 }hwss_phy_w5500_t;
 
 typedef union {
+    #if BYTE_ORDER == LITTLE_ENDIAN
     struct {
         uint8_t link: 1;   /*!< Link status */
         uint8_t speed: 1;  /*!< Speed status */
@@ -34,6 +36,16 @@ typedef union {
         uint8_t opsel: 1;  /*!< Operation select */
         uint8_t reset: 1;  /*!< Reset, when this bit is '0', PHY will get reset */
     };
+    #else
+    struct {
+        uint8_t speed: 1;  /*!< Speed status */
+        uint8_t duplex: 1; /*!< Duplex status */
+        uint8_t opmode: 3; /*!< Operation mode */
+        uint8_t opsel: 1;  /*!< Operation select */
+        uint8_t reset: 1;  /*!< Reset, when this bit is '0', PHY will get reset */
+        uint8_t link: 1;   /*!< Link status */
+    };
+    #endif
     uint8_t val;
 } phycfg_reg_t;
 
@@ -78,12 +90,12 @@ static void hwss_phy_w5500_check_timer_cb(void *args){
 
     if(link!=link_p){
         if(link==HWSS_LINK_UP){
-            if(esp_event_post_to(phy_w5500->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_PHY_CONNECT,NULL,0,0)!= ESP_OK)
+            if(esp_event_post_to(phy_w5500->super.elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_CONNECT,NULL,0,0)!= ESP_OK)
                 ESP_LOGE(TAG,"fail to post event");
             ESP_LOGD(TAG,"Connected");
         }
         else{
-            if(esp_event_post_to(phy_w5500->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_PHY_DISCONN,NULL,0,0)!= ESP_OK)
+            if(esp_event_post_to(phy_w5500->super.elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_DISCONN,NULL,0,0)!= ESP_OK)
                 ESP_LOGE(TAG,"fail to post event");
             ESP_LOGD(TAG,"Disconnected");
         }
@@ -229,10 +241,10 @@ static esp_err_t hwss_phy_w5500_set_link(hwss_phy_t *phy, hwss_link_t link){
     if(link!=link_p){
         atomic_store(&(phy_w5500->link),link);
         if(link==HWSS_LINK_UP)
-            ESP_GOTO_ON_ERROR(esp_event_post_to(phy_w5500->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_PHY_CONNECT,NULL,0,0),
+            ESP_GOTO_ON_ERROR(esp_event_post_to(phy_w5500->super.elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_CONNECT,NULL,0,0),
                             err,TAG,"fail to post event");
         else
-            ESP_GOTO_ON_ERROR(esp_event_post_to(phy_w5500->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_PHY_DISCONN,NULL,0,0),
+            ESP_GOTO_ON_ERROR(esp_event_post_to(phy_w5500->super.elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_DISCONN,NULL,0,0),
                             err,TAG,"fail to post event");
     }
 

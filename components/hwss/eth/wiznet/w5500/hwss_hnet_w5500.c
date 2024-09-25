@@ -2,7 +2,7 @@
 #include "esp_check.h"
 #include "esp_timer.h"
 #include "drv_w5500.h"
-#include "hwss_event.h"
+#include "hwss_eth_event.h"
 #include "hwss_hnet_wiznet.h"
 
 #define CP_REQ_MS2TICK(ms)              ms/25
@@ -33,25 +33,25 @@ static void hwss_hnet_w5500_check_state_timer_cb(void *args){
     }
 
     if(ir&W5500_IR_CONFLICT){        
-        if(esp_event_post_to(hnet_w5500->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HNET_IP_CONFLICT,NULL,0,0)!=ESP_OK){
+        if(esp_event_post_to(hnet_w5500->super.elp_hdl,HWSS_HNET_EVENT,HWSS_HNET_EVENT_IP_CONFLICT,NULL,0,0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
         }
     }
 
     if(ir&W5500_IR_UNREACH){        
-        if(esp_event_post_to(hnet_w5500->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HNET_DEST_UNREACH,NULL,0,0)!=ESP_OK){
+        if(esp_event_post_to(hnet_w5500->super.elp_hdl,HWSS_HNET_EVENT,HWSS_HNET_EVENT_DEST_UNREACH,NULL,0,0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
         }
     }
 
     if(ir&W5500_IR_PPPoE){        
-        if(esp_event_post_to(hnet_w5500->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HNET_PPPOE_CLOSE,NULL,0,0)!=ESP_OK){
+        if(esp_event_post_to(hnet_w5500->super.elp_hdl,HWSS_HNET_EVENT,HWSS_HNET_EVENT_PPPOE_CLOSE,NULL,0,0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
         }
     }
 
     if(ir&W5500_IR_MP){        
-        if(esp_event_post_to(hnet_w5500->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HNET_MAGIC_PACK,NULL,0,0)!=ESP_OK){
+        if(esp_event_post_to(hnet_w5500->super.elp_hdl,HWSS_HNET_EVENT,HWSS_HNET_EVENT_MAGIC_PACK,NULL,0,0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
         }
     }
@@ -282,7 +282,7 @@ err:
     return ret;
 }
 
-hwss_hnet_t *hwss_hnet_new_w5500(esp_event_loop_handle_t elp_hdl, hwss_io_t *io, hwss_hnet_config_t *config){
+hwss_hnet_t *hwss_hnet_new_w5500(esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_hnet_config_t *config){
     hwss_hnet_t *ret=NULL;
     hwss_hnet_w5500_t* hnet=NULL;
 

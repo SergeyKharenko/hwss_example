@@ -2,7 +2,7 @@
 #include "esp_check.h"
 #include "esp_timer.h"
 #include "drv_w5100s.h"
-#include "hwss_event.h"
+#include "hwss_eth_event.h"
 #include "hwss_hsl_wiznet.h"
 
 static const char *TAG = "w5100s.hwss_hsl";
@@ -29,21 +29,21 @@ static void hwss_hsl_w5100s_check_state_timer_cb(void *args){
     }
 
     if(slir&W5100S_SLIR_ARP){
-        if(esp_event_post_to(hsl_w5100s->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HSL_ARP,NULL,0,0)!=ESP_OK){
+        if(esp_event_post_to(hsl_w5100s->super.elp_hdl,HWSS_HSL_EVENT,HWSS_HSL_EVENT_ARP,NULL,0,0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
             return;
         }
     }
 
     if(slir&W5100S_SLIR_TIMEOUT){
-        if(esp_event_post_to(hsl_w5100s->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HSL_TIMEOUT,NULL,0,0)!=ESP_OK){
+        if(esp_event_post_to(hsl_w5100s->super.elp_hdl,HWSS_HSL_EVENT,HWSS_HSL_EVENT_TIMEOUT,NULL,0,0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
             return;
         }
     }
 
     if(slir&W5100S_SLIR_PING){
-        if(esp_event_post_to(hsl_w5100s->super.elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HSL_PING,NULL,0,0)!=ESP_OK){
+        if(esp_event_post_to(hsl_w5100s->super.elp_hdl,HWSS_HSL_EVENT,HWSS_HSL_EVENT_PING,NULL,0,0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");
             return;
         }

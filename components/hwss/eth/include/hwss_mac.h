@@ -1,5 +1,5 @@
 #pragma once
-
+#include "hwss_sku.h"
 #include "hwss_io.h"
 #include "hwss_type.h"
 
@@ -19,3 +19,5 @@ struct hwss_mac_s{
     esp_err_t (*init)(hwss_mac_t *mac);
     esp_err_t (*deinit)(hwss_mac_t *mac);
 };
+
+hwss_mac_t *hwss_mac_new(hwss_sku_t sku, hwss_io_t *io, const hwss_mac_config_t *config);

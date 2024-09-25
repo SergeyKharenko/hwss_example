@@ -1,7 +1,9 @@
 #pragma once
 
+#include "hwss_sku.h"
 #include "hwss_opt.h"
 #include "hwss_io.h"
+#include "hwss_hir.h"
 #include "hwss_type.h"
 
 typedef enum{
@@ -100,3 +102,5 @@ typedef struct{
     hwss_hso_t      *hso;
     hwss_sockid_t   id;
 }hwss_hso_event_arg_t;
+
+hwss_hso_t *hwss_hso_new(hwss_sku_t sku, esp_event_loop_handle_t elp, hwss_io_t *io, hwss_hir_t* hir, const hwss_hso_config_t *config);

@@ -1,15 +1,6 @@
 #pragma once
-
-#include "hwss_opt.h"
-
-#include "hwss_io.h"
-#include "hwss_hir.h"
-#include "hwss_lpw.h"
-#include "hwss_phy.h"
-#include "hwss_mac.h"
-#include "hwss_hnet.h"
-#include "hwss_hso.h"
-#include "hwss_hsl.h"
+#include "esp_event.h"
+#include "hwss_eth_config.h"
 
 typedef enum{
     HWSS_ETH_STA_RUNNING,
@@ -17,15 +8,13 @@ typedef enum{
     HWSS_ETH_STA_SLEEP
 }hwss_eth_state_t;
 
-typedef struct{
-
-}hwss_eth_config_t;
-
 typedef struct hwss_eth_s hwss_eth_t;
 
 struct hwss_eth_s{
+    hwss_sku_t  sku;
     char name[HWSS_ETH_NAMELEN_MAX];
     hwss_eth_state_t state;
+    esp_event_loop_handle_t elp_hdl;
 
     hwss_io_t   *io;
     hwss_hir_t  *hir;
@@ -35,9 +24,18 @@ struct hwss_eth_s{
     hwss_hnet_t *hnet;
     hwss_hso_t  *hso;
 
-    hwss_hsl_t  *hsl;
+    hwss_lpw_t  *lpw;
+
+    struct{
+        hwss_hsl_t  *hsl;
+        hwss_hdc_t  *hdc;
+    }opt;
 };
+
+hwss_eth_t *hwss_eth_new(const hwss_eth_config_t *config);
 
 esp_err_t hwss_eth_init(hwss_eth_t *eth);
 esp_err_t hwss_eth_deinit(hwss_eth_t *eth);
 
+esp_err_t hwss_eth_start(hwss_eth_t *eth);
+esp_err_t hwss_eth_stop(hwss_eth_t *eth);

@@ -1,4 +1,5 @@
 #include <sys/cdefs.h>
+#include <machine/endian.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_check.h"
@@ -22,6 +23,7 @@ static const uint16_t   w5500_sock_frag_default=            0x4000;
 static const char *TAG = "w5500.hwss_hso";
 
 typedef union{
+    #if BYTE_ORDER == LITTLE_ENDIAN
     struct{
         uint8_t protocol :4;
         uint8_t unicastb_mip6b :1;
@@ -29,6 +31,15 @@ typedef union{
         uint8_t bcastb :1;
         uint8_t multi_mfen :1;
     };
+    #else
+    struct{
+        uint8_t unicastb_mip6b :1;
+        uint8_t nd_mc_mmb :1;
+        uint8_t bcastb :1;        
+        uint8_t multi_mfen :1;
+        uint8_t protocol :4;
+    };
+    #endif
     uint8_t val;
 }sn_mr_reg_t;
 

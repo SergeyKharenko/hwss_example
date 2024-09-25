@@ -1,5 +1,6 @@
 #pragma once
 #include "esp_err.h"
+#include "hwss_sku.h"
 #include "hwss_type.h"
 #include "hwss_event.h"
 #include "hwss_io.h"
@@ -28,3 +29,5 @@ struct hwss_phy_s {
     esp_err_t (*set_duplex)(hwss_phy_t *phy, hwss_duplex_t duplex);
     esp_err_t (*get_duplex)(hwss_phy_t *phy, hwss_duplex_t *duplex);
 };
+
+hwss_phy_t *hwss_phy_new(hwss_sku_t sku, esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_phy_config_t *phy_config);

@@ -1,6 +1,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_check.h"
+#include "hwss_eth_event.h"
 #include "hwss_hso_scm.h"
 #include "hwss_event.h"
 
@@ -14,23 +15,23 @@ static esp_err_t hwss_hso_scm_sock_event_post(hwss_hso_scm_t *hso_scm, hwss_sock
     };
 
     if(sintr&HWSS_HSO_INTR_SEND_OK)
-        ESP_GOTO_ON_ERROR(esp_event_post_to(hso_scm->elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HSO_SEND_OK,
+        ESP_GOTO_ON_ERROR(esp_event_post_to(hso_scm->elp_hdl,HWSS_HSO_EVENT,HWSS_HSO_EVENT_SEND_OK,
                     (void *)&hso_event_arg,sizeof(hwss_hso_event_arg_t),0),err,TAG,"fail to post event");
 
     if(sintr&HWSS_HSO_INTR_TIMEOUT)
-        ESP_GOTO_ON_ERROR(esp_event_post_to(hso_scm->elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HSO_TIMEOUT,
+        ESP_GOTO_ON_ERROR(esp_event_post_to(hso_scm->elp_hdl,HWSS_HSO_EVENT,HWSS_HSO_EVENT_TIMEOUT,
                     (void *)&hso_event_arg,sizeof(hwss_hso_event_arg_t),0),err,TAG,"fail to post event");
 
     if(sintr&HWSS_HSO_INTR_RECV)
-        ESP_GOTO_ON_ERROR(esp_event_post_to(hso_scm->elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HSO_RECV,
+        ESP_GOTO_ON_ERROR(esp_event_post_to(hso_scm->elp_hdl,HWSS_HSO_EVENT,HWSS_HSO_EVENT_RECV,
                     (void *)&hso_event_arg,sizeof(hwss_hso_event_arg_t),0),err,TAG,"fail to post event");
 
     if(sintr&HWSS_HSO_INTR_DISCONN)
-        ESP_GOTO_ON_ERROR(esp_event_post_to(hso_scm->elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HSO_DISCONN,
+        ESP_GOTO_ON_ERROR(esp_event_post_to(hso_scm->elp_hdl,HWSS_HSO_EVENT,HWSS_HSO_EVENT_DISCONN,
                     (void *)&hso_event_arg,sizeof(hwss_hso_event_arg_t),0),err,TAG,"fail to post event");
 
     if(sintr&HWSS_HSO_INTR_CONNECT)
-        ESP_GOTO_ON_ERROR(esp_event_post_to(hso_scm->elp_hdl,HWSS_INTER_EVENT,HWSS_INTER_EVENT_HSO_CONNECT,
+        ESP_GOTO_ON_ERROR(esp_event_post_to(hso_scm->elp_hdl,HWSS_HSO_EVENT,HWSS_HSO_EVENT_CONNECT,
                     (void *)&hso_event_arg,sizeof(hwss_hso_event_arg_t),0),err,TAG,"fail to post event");
 
 err:

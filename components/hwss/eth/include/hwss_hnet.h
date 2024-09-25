@@ -58,3 +58,5 @@ struct hwss_hnet_s{
     esp_err_t (*set_ppp_max_recv_unit)(hwss_hnet_t *hnet, const uint16_t *unit);
     esp_err_t (*get_ppp_max_recv_unit)(hwss_hnet_t *hnet, uint16_t *unit);
 };
+
+hwss_hnet_t *hwss_hnet_new(hwss_sku_t sku,esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_hnet_config_t *config);
