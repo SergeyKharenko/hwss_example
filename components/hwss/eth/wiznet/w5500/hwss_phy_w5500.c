@@ -13,6 +13,10 @@ static const char *TAG = "w5500.hwss_phy";
 
 typedef struct{
     hwss_phy_t super;
+
+    hwss_io_t *io;
+    esp_event_loop_handle_t elp_hdl;
+
     _Atomic hwss_link_t link;
     _Atomic hwss_speed_t speed;
     _Atomic hwss_duplex_t duplex;
@@ -22,8 +26,6 @@ typedef struct{
 
     uint32_t reset_timeout_ms;
     uint32_t autonego_timeout_ms;
-
-    bool is_started;
 }hwss_phy_w5500_t;
 
 typedef union {
@@ -64,7 +66,7 @@ static void hwss_phy_w5500_check_timer_cb(void *args){
     hwss_phy_w5500_t *phy_w5500=(hwss_phy_w5500_t *)args;
     uint8_t stat=0;
 
-    if(W5500_getPHYCFGR(phy_w5500->super.io,&stat) !=ESP_OK){
+    if(W5500_getPHYCFGR(phy_w5500->io,&stat) !=ESP_OK){
         ESP_LOGE(TAG,"fail to read PHYCFGR");
         return;
     }
@@ -90,12 +92,12 @@ static void hwss_phy_w5500_check_timer_cb(void *args){
 
     if(link!=link_p){
         if(link==HWSS_LINK_UP){
-            if(esp_event_post_to(phy_w5500->super.elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_CONNECT,NULL,0,0)!= ESP_OK)
+            if(esp_event_post_to(phy_w5500->elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_CONNECT,NULL,0,0)!= ESP_OK)
                 ESP_LOGE(TAG,"fail to post event");
             ESP_LOGD(TAG,"Connected");
         }
         else{
-            if(esp_event_post_to(phy_w5500->super.elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_DISCONN,NULL,0,0)!= ESP_OK)
+            if(esp_event_post_to(phy_w5500->elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_DISCONN,NULL,0,0)!= ESP_OK)
                 ESP_LOGE(TAG,"fail to post event");
             ESP_LOGD(TAG,"Disconnected");
         }
@@ -109,15 +111,15 @@ static esp_err_t hwss_phy_w5500_reset(hwss_phy_t *phy){
 
     atomic_store(&(phy_w5500->link),HWSS_LINK_DOWN);
 
-    ESP_GOTO_ON_ERROR(W5500_getPHYCFGR(phy->io,&cfg),err,TAG,"fail to read PHYCFGR");
+    ESP_GOTO_ON_ERROR(W5500_getPHYCFGR(phy_w5500->io,&cfg),err,TAG,"fail to read PHYCFGR");
     cfg &= W5500_PHYCFGR_RST;
-    ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&cfg),err,TAG,"fail to write PHYCFGR");
+    ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy_w5500->io,&cfg),err,TAG,"fail to write PHYCFGR");
     
     vTaskDelay(pdMS_TO_TICKS(phy_w5500->reset_timeout_ms));
 
-    ESP_GOTO_ON_ERROR(W5500_getPHYCFGR(phy->io,&cfg),err,TAG,"fail to read PHYCFGR");
+    ESP_GOTO_ON_ERROR(W5500_getPHYCFGR(phy_w5500->io,&cfg),err,TAG,"fail to read PHYCFGR");
     cfg |= ~W5500_PHYCFGR_RST;
-    ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&cfg),err,TAG,"fail to write PHYCFGR");
+    ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy_w5500->io,&cfg),err,TAG,"fail to write PHYCFGR");
 
 err:
     return ret;
@@ -132,25 +134,25 @@ static esp_err_t hwss_phy_w5500_init(hwss_phy_t *phy){
 
 static esp_err_t hwss_phy_w5500_deinit(hwss_phy_t *phy){
     hwss_phy_w5500_t *phy_w5500=__containerof(phy,hwss_phy_w5500_t,super);
-    if(!phy_w5500->is_started)
+    if(!phy->is_started)
         return ESP_OK;
-    phy_w5500->is_started=false;
+    phy->is_started=false;
     return esp_timer_stop(phy_w5500->check_timer);
 }
 
 static esp_err_t hwss_phy_w5500_start(hwss_phy_t *phy){
     hwss_phy_w5500_t *phy_w5500=__containerof(phy,hwss_phy_w5500_t,super);
-    if(phy_w5500->is_started)
+    if(phy->is_started)
         return ESP_OK;
-    phy_w5500->is_started=true;
+    phy->is_started=true;
     return esp_timer_start_periodic(phy_w5500->check_timer, phy_w5500->check_period_ms*1000);
 }
 
 static esp_err_t hwss_phy_w5500_stop(hwss_phy_t *phy){
     hwss_phy_w5500_t *phy_w5500=__containerof(phy,hwss_phy_w5500_t,super);
-    if(!phy_w5500->is_started)
+    if(!phy->is_started)
         return ESP_OK;
-    phy_w5500->is_started=false;
+    phy->is_started=false;
     return esp_timer_stop(phy_w5500->check_timer);
 }
 
@@ -159,7 +161,7 @@ static esp_err_t hwss_phy_w5500_autonego_ctrl(hwss_phy_t *phy, hwss_phy_autoneg_
     hwss_phy_w5500_t *phy_w5500=__containerof(phy,hwss_phy_w5500_t,super);
     phycfg_reg_t stat;
 
-    ESP_GOTO_ON_ERROR(W5500_getPHYCFGR(phy->io,&(stat.val)),err,TAG,"fail to read PHYCFGR");
+    ESP_GOTO_ON_ERROR(W5500_getPHYCFGR(phy_w5500->io,&(stat.val)),err,TAG,"fail to read PHYCFGR");
 
     switch (cmd) {
     case HWSS_PHY_AUTONEGO_RESTART:
@@ -169,12 +171,12 @@ static esp_err_t hwss_phy_w5500_autonego_ctrl(hwss_phy_t *phy, hwss_phy_autoneg_
         atomic_store(&(phy_w5500->link),HWSS_LINK_DOWN);
 
         stat.val&=W5500_PHYCFGR_RST;
-        ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)),err,TAG,"fail to write PHYCFGR");
+        ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy_w5500->io,&(stat.val)),err,TAG,"fail to write PHYCFGR");
 
         vTaskDelay(pdMS_TO_TICKS(phy_w5500->reset_timeout_ms));
 
         stat.val|=~W5500_PHYCFGR_RST;
-        ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)),err,TAG,"fail to write PHYCFGR");
+        ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy_w5500->io,&(stat.val)),err,TAG,"fail to write PHYCFGR");
 
         *autonego_en_stat = stat.opmode == W5500_OP_MODE_ALL_CAPABLE || stat.opmode == W5500_OP_MODE_100BT_HALF_AUTO_EN;
         break;
@@ -197,12 +199,12 @@ static esp_err_t hwss_phy_w5500_autonego_ctrl(hwss_phy_t *phy, hwss_phy_autoneg_
         }
         stat.val|=W5500_PHYCFGR_OPMD;
         stat.val&=W5500_PHYCFGR_RST;
-        ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)), err, TAG, "write PHYCFG failed");
+        ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy_w5500->io,&(stat.val)), err, TAG, "write PHYCFG failed");
 
         vTaskDelay(pdMS_TO_TICKS(phy_w5500->reset_timeout_ms));
 
         stat.val|=~W5500_PHYCFGR_RST;
-        ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)), err, TAG, "write PHYCFG failed");
+        ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy_w5500->io,&(stat.val)), err, TAG, "write PHYCFG failed");
 
         *autonego_en_stat = false;
         break;
@@ -211,12 +213,12 @@ static esp_err_t hwss_phy_w5500_autonego_ctrl(hwss_phy_t *phy, hwss_phy_autoneg_
         stat.val|=W5500_PHYCFGR_OPMD;
         stat.val&=W5500_PHYCFGR_RST;
         stat.opmode = W5500_OP_MODE_ALL_CAPABLE; // all capable, auto-negotiation enabled
-        ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)), err, TAG, "write PHYCFG failed");
+        ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy_w5500->io,&(stat.val)), err, TAG, "write PHYCFG failed");
 
         vTaskDelay(pdMS_TO_TICKS(phy_w5500->reset_timeout_ms));
 
         stat.val|=~W5500_PHYCFGR_RST;
-        ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)), err, TAG, "write PHYCFG failed");
+        ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy_w5500->io,&(stat.val)), err, TAG, "write PHYCFG failed");
 
         *autonego_en_stat = true;
         break;
@@ -241,10 +243,10 @@ static esp_err_t hwss_phy_w5500_set_link(hwss_phy_t *phy, hwss_link_t link){
     if(link!=link_p){
         atomic_store(&(phy_w5500->link),link);
         if(link==HWSS_LINK_UP)
-            ESP_GOTO_ON_ERROR(esp_event_post_to(phy_w5500->super.elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_CONNECT,NULL,0,0),
+            ESP_GOTO_ON_ERROR(esp_event_post_to(phy_w5500->elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_CONNECT,NULL,0,0),
                             err,TAG,"fail to post event");
         else
-            ESP_GOTO_ON_ERROR(esp_event_post_to(phy_w5500->super.elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_DISCONN,NULL,0,0),
+            ESP_GOTO_ON_ERROR(esp_event_post_to(phy_w5500->elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_DISCONN,NULL,0,0),
                             err,TAG,"fail to post event");
     }
 
@@ -266,7 +268,7 @@ static esp_err_t hwss_phy_w5500_set_speed(hwss_phy_t *phy, hwss_speed_t speed){
 
     atomic_store(&(phy_w5500->link),HWSS_LINK_DOWN);
 
-    ESP_GOTO_ON_ERROR(W5500_getPHYCFGR(phy->io,&(stat.val)),err,TAG,"fail to read PHYCFGR");
+    ESP_GOTO_ON_ERROR(W5500_getPHYCFGR(phy_w5500->io,&(stat.val)),err,TAG,"fail to read PHYCFGR");
     if(stat.val&W5500_PHYCFGR_DPX_FULL){
         if(speed==HWSS_SPEED_100M)
             stat.opmode=W5500_OP_MODE_100BT_FULL_AUTO_DIS;
@@ -282,11 +284,11 @@ static esp_err_t hwss_phy_w5500_set_speed(hwss_phy_t *phy, hwss_speed_t speed){
 
     stat.val|=W5500_PHYCFGR_OPMD;
     stat.val&=W5500_PHYCFGR_RST;
-    ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)),err,TAG,"fail to write PHYCFGR");
+    ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy_w5500->io,&(stat.val)),err,TAG,"fail to write PHYCFGR");
     vTaskDelay(pdMS_TO_TICKS(phy_w5500->reset_timeout_ms));
 
     stat.val|=~W5500_PHYCFGR_RST;
-    ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)),err,TAG,"fail to write PHYCFGR");
+    ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy_w5500->io,&(stat.val)),err,TAG,"fail to write PHYCFGR");
 
     atomic_store(&(phy_w5500->speed),speed);
 err:
@@ -307,7 +309,7 @@ static esp_err_t hwss_phy_w5500_set_duplex(hwss_phy_t *phy, hwss_duplex_t duplex
 
     atomic_store(&(phy_w5500->link),HWSS_LINK_DOWN);
 
-    ESP_GOTO_ON_ERROR(W5500_getPHYCFGR(phy->io,&(stat.val)),err,TAG,"fail to read PHYCFGR");
+    ESP_GOTO_ON_ERROR(W5500_getPHYCFGR(phy_w5500->io,&(stat.val)),err,TAG,"fail to read PHYCFGR");
     if(stat.val&W5500_PHYCFGR_SPD_100){
         if(duplex==HWSS_DUPLEX_FULL)
             stat.opmode=W5500_OP_MODE_100BT_FULL_AUTO_DIS;
@@ -323,11 +325,11 @@ static esp_err_t hwss_phy_w5500_set_duplex(hwss_phy_t *phy, hwss_duplex_t duplex
 
     stat.val|=W5500_PHYCFGR_OPMD;
     stat.val&=W5500_PHYCFGR_RST;
-    ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)),err,TAG,"fail to write PHYCFGR");
+    ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy_w5500->io,&(stat.val)),err,TAG,"fail to write PHYCFGR");
     vTaskDelay(pdMS_TO_TICKS(phy_w5500->reset_timeout_ms));
 
     stat.val|=~W5500_PHYCFGR_RST;
-    ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy->io,&(stat.val)),err,TAG,"fail to write PHYCFGR");
+    ESP_GOTO_ON_ERROR(W5500_setPHYCFGR(phy_w5500->io,&(stat.val)),err,TAG,"fail to write PHYCFGR");
 
     atomic_store(&(phy_w5500->duplex),duplex);
 err:
@@ -357,8 +359,7 @@ hwss_phy_t *hwss_phy_new_w5500(esp_event_loop_handle_t elp_hdl, hwss_io_t *io, c
     if(phy_config->check_period_ms<5)
         ESP_LOGW(TAG,"check period too short might SERIOUSLY affects the execution of other tasks!");
     
-    phy->super.io=io;
-    phy->super.elp_hdl=elp_hdl;
+    phy->super.is_started=false;
     phy->super.reset=hwss_phy_w5500_reset;
     phy->super.init=hwss_phy_w5500_init;
     phy->super.deinit=hwss_phy_w5500_deinit;
@@ -372,9 +373,10 @@ hwss_phy_t *hwss_phy_new_w5500(esp_event_loop_handle_t elp_hdl, hwss_io_t *io, c
     phy->super.set_duplex=hwss_phy_w5500_set_duplex;
     phy->super.get_duplex=hwss_phy_w5500_get_duplex;
 
+    phy->io=io;
+    phy->elp_hdl=elp_hdl;
     phy->check_period_ms=phy_config->check_period_ms;
     phy->reset_timeout_ms=phy_config->reset_timeout_ms;
-    phy->is_started=false;
 
     esp_timer_create_args_t timer_arg={
         .name="hwss_phy_w5500_check_timer",

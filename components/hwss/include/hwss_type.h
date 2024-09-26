@@ -91,6 +91,17 @@ inline uint16_t hwss_ntohs(uint16_t x){
 #endif
 }
 
+typedef enum{
+    HWSS_SOCKACT_ACTIVE,
+    HWSS_SOCKACT_IDLE,
+    HWSS_SOCKACT_GENERIC
+}hwss_sockact_sta_t;
+
+#define HWSS_SOCK_INTR_SEND_OK           1<<0
+#define HWSS_SOCK_INTR_TIMEOUT           1<<1
+#define HWSS_SOCK_INTR_RECV              1<<2
+#define HWSS_SOCK_INTR_DISCONN           1<<3
+#define HWSS_SOCK_INTR_CONNECT           1<<4
 
 
 // inline bool hwss_same_option_check(uint8_t num, bool opt,...){

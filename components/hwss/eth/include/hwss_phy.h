@@ -13,8 +13,7 @@ typedef struct{
 typedef struct hwss_phy_s hwss_phy_t;
 
 struct hwss_phy_s {
-    hwss_io_t *io;
-    esp_event_loop_handle_t elp_hdl;
+    bool is_started;
     
     esp_err_t (*reset)(hwss_phy_t *phy);
     esp_err_t (*init)(hwss_phy_t *phy);

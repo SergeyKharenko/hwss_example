@@ -7,12 +7,6 @@
 #include "hwss_type.h"
 
 typedef enum{
-    HWSS_HSO_SOCKACT_ACTIVE,
-    HWSS_HSO_SOCKACT_IDLE,
-    HWSS_HSO_SOCKACT_GENERIC
-}hwss_hso_sockact_sta_t;
-
-typedef enum{
     HWSS_HSO_SOCK_CLOSED,
     HWSS_HSO_SOCK_OPENED,
 
@@ -50,15 +44,8 @@ typedef struct{
 typedef struct hwss_hso_s hwss_hso_t;
 
 struct hwss_hso_s{
-    hwss_io_t *io;
-
-    void      *scm;
-    
     esp_err_t (*init)(hwss_hso_t *hso);
     esp_err_t (*deinit)(hwss_hso_t *hso);
-
-    esp_err_t (*start)(hwss_hso_t *hso);
-    esp_err_t (*stop)(hwss_hso_t *hso);
 
     esp_err_t (*ctrl_sock)(hwss_hso_t *hso, hwss_sockid_t id, hwss_hso_sockctrl_t ctrl);
 
@@ -90,12 +77,8 @@ struct hwss_hso_s{
     esp_err_t (*set_sock_keepalive_tick)(hwss_hso_t *hso, hwss_sockid_t id, const uint8_t *tick);
     esp_err_t (*get_sock_keepalive_tick)(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *tick);
 
-    esp_err_t (*set_sockact_state)(hwss_hso_t *hso, hwss_sockid_t id, const hwss_hso_sockact_sta_t *sta);
-    esp_err_t (*get_sockact_state)(hwss_hso_t *hso, hwss_sockid_t id, hwss_hso_sockact_sta_t *sta);
-
     esp_err_t (*get_sock_state)(hwss_hso_t *hso, hwss_sockid_t id, hwss_hso_socksta_t *sta);
     esp_err_t (*get_sock_state_raw)(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *sta);
-    
 };
 
 typedef struct{

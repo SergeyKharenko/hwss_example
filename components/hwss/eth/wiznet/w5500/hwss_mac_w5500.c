@@ -7,6 +7,8 @@ static const char *TAG = "w5500.hwss_mac";
 
 typedef struct{
     hwss_mac_t super;
+
+    hwss_io_t *io;
     hwss_mac_addr_t addr;
 }hwss_mac_w5500_t;
 
@@ -14,7 +16,7 @@ static esp_err_t hwss_mac_w5500_set_addr(hwss_mac_t *mac, const hwss_mac_addr_t 
     esp_err_t ret=ESP_OK;
     hwss_mac_w5500_t *mac_w5500=__containerof(mac,hwss_mac_w5500_t,super);
 
-    ESP_GOTO_ON_ERROR(W5500_setSHAR(mac->io,addr),err,TAG,"cannot write SHAR");
+    ESP_GOTO_ON_ERROR(W5500_setSHAR(mac_w5500->io,addr),err,TAG,"cannot write SHAR");
     memcpy(mac_w5500->addr,addr,HWSS_MAC_ADDR_LEN);
 err:
     return ret;
@@ -22,7 +24,8 @@ err:
 
 static esp_err_t hwss_mac_w5500_get_addr(hwss_mac_t *mac, hwss_mac_addr_t addr){
     esp_err_t ret=ESP_OK;
-    ESP_GOTO_ON_ERROR(W5500_getSHAR(mac->io,addr),err,TAG,"cannot read SHAR");
+    hwss_mac_w5500_t *mac_w5500=__containerof(mac,hwss_mac_w5500_t,super);
+    ESP_GOTO_ON_ERROR(W5500_getSHAR(mac_w5500->io,addr),err,TAG,"cannot read SHAR");
 err:
     return ret;
 }
@@ -52,7 +55,7 @@ hwss_mac_t *hwss_mac_new_w5500(hwss_io_t *io, const hwss_mac_config_t *config){
 
     memcpy(mac->addr,config->addr,HWSS_MAC_ADDR_LEN);
 
-    mac->super.io = io;
+    mac->io = io;
     mac->super.set_addr=hwss_mac_w5500_set_addr;
     mac->super.get_addr=hwss_mac_w5500_get_addr;
 

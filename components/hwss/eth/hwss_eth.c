@@ -96,6 +96,7 @@ hwss_eth_t *hwss_eth_new(const hwss_eth_config_t *config){
     eth_pro->rst_timeout_ms=config->rst_timeout_ms;
 
     hwss_eth_gen_id++;
+    return &eth_pro->super;
 err:
     return ret;
 }
@@ -104,7 +105,7 @@ esp_err_t hwss_eth_init(hwss_eth_t *eth){
     esp_err_t ret=ESP_OK;
     hwss_eth_pro_t *eth_pro=__containerof(eth,hwss_eth_pro_t,super);
     gpio_config_t cfg={
-        .pin_bit_mask=1ull<<(eth_pro->rst_ionum),
+        .pin_bit_mask=(1ull<<(eth_pro->rst_ionum)),
         .mode=GPIO_MODE_OUTPUT
     };
     ESP_GOTO_ON_ERROR(gpio_config(&cfg),err,TAG,"cannot initialize reset pin");

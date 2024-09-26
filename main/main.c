@@ -2,6 +2,7 @@
 #include <rom/ets_sys.h>
 #include "esp_log.h"
 #include "hwss_eth_event.h"
+#include "hwss_eth_config.h"
 #include "hwss_eth.h"
 
 const gpio_num_t GPIO_RST_PIN=9;
@@ -9,11 +10,11 @@ const gpio_num_t GPIO_IR_PIN=14;
 
 static const char *TAG="main";
 
-// hwss_io_spi_config_t cfg={
-//     .spi_host_id=SPI2_HOST,
-//     .cs_io_num=10,
-//     .speed_khz=20*1000
-// };
+hwss_io_spi_config_t cfg={
+    .spi_host_id=SPI2_HOST,
+    .cs_io_num=10,
+    .speed_khz=20*1000
+};
 
 // hwss_phy_config_t pcfg={
 //     .check_period_ms=10,
@@ -134,7 +135,7 @@ void app_main(void)
     // hso=hwss_hso_new_w5100s(hdl,io,hir,&scfg);
     // hsl=hwss_hsl_new_w5100s(hdl,io,&lcfg);
 
-    hwss_eth_config_t eth_config=HWSS_ETH_W5500_DEFAULT_CONFIG(HWSS_IO_SPI,&bcfg,GPIO_IR_PIN,GPIO_RST_PIN);
+    hwss_eth_config_t eth_config=HWSS_ETH_W5500_DEFAULT_CONFIG(HWSS_IO_SPI,&cfg,GPIO_IR_PIN,GPIO_RST_PIN);
     eth=hwss_eth_new(&eth_config);
 
     esp_event_handler_register_with(eth->elp_hdl,HWSS_EVENT_ANY_BASE,HWSS_EVENT_ANY_ID,hwss_event_handler,NULL);
@@ -142,11 +143,13 @@ void app_main(void)
 
     gpio_install_isr_service(0);
 
-    // hsl->init(hsl);
-    // hsl->start(hsl);
+    hwss_eth_init(eth);
+    hwss_eth_start(eth);
 
-    hwss_ip_addr_t ip={10,0,0,5};
-    hwss_ip_addr_t gip={10,0,0,1};
+    // hwss_ip_addr_t ip={10,0,0,5};
+    // hwss_ip_addr_t gip={10,0,0,1};
+    hwss_ip_addr_t ip={192,168,0,10};
+    hwss_ip_addr_t gip={192,168,0,1};
     hwss_ip_addr_t mask={255,255,255,0};
 
     eth->hnet->set_source_addr(eth->hnet,ip);
@@ -154,6 +157,8 @@ void app_main(void)
     eth->hnet->set_subnet_mask(eth->hnet,mask);
 
     char *data="Hello World!";
+
+
     /////// TCP TEST /////////
     hwss_proto_t pro=HWSS_PROTO_TCP;
     hwss_port_t sport=5590;
@@ -203,7 +208,7 @@ void app_main(void)
             break;
         }
         ESP_LOGI(TAG,"LOOP");
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
 
 ex:
