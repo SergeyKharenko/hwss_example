@@ -21,26 +21,26 @@ typedef struct{
     spi_device_interface_config_t   spi_config;
 }hwss_io_wiznet_spi_t;
 
-inline bool IO_WIZNET_SPI_LOCK(hwss_io_wiznet_spi_t *io){
+static inline bool IO_WIZNET_SPI_LOCK(hwss_io_wiznet_spi_t *io){
     return (xSemaphoreTake(io->lock,pdMS_TO_TICKS(WIZNET_IO_LOCK_TIMEOUT_MS)) == pdTRUE);
 }
 
-inline bool IO_WIZNET_SPI_UNLOCK(hwss_io_wiznet_spi_t *io){
+static inline bool IO_WIZNET_SPI_UNLOCK(hwss_io_wiznet_spi_t *io){
     return (xSemaphoreGive(io->lock) == pdTRUE);
 }
 
-inline esp_err_t hwss_io_wiznet_spi_init(hwss_io_t *io){
+static inline esp_err_t hwss_io_wiznet_spi_init(hwss_io_t *io){
     hwss_io_wiznet_spi_t *io_wiznet_spi=__containerof(io,hwss_io_wiznet_spi_t,super);
 
     return spi_bus_add_device(io_wiznet_spi->spi_host_id,&(io_wiznet_spi->spi_config),&(io_wiznet_spi->hdl));
 }
 
-inline esp_err_t hwss_io_wiznet_spi_deinit(hwss_io_t *io){
+static inline esp_err_t hwss_io_wiznet_spi_deinit(hwss_io_t *io){
     hwss_io_wiznet_spi_t *io_wiznet_spi=__containerof(io,hwss_io_wiznet_spi_t,super);
     return spi_bus_remove_device(io_wiznet_spi->hdl);
 }
 
-inline esp_err_t hwss_io_wiznet_spi_trans(hwss_io_t *io, spi_transaction_t *trans){
+static inline esp_err_t hwss_io_wiznet_spi_trans(hwss_io_t *io, spi_transaction_t *trans){
     esp_err_t ret=ESP_OK;
     hwss_io_wiznet_spi_t *io_wiznet_spi=__containerof(io,hwss_io_wiznet_spi_t,super);
 
@@ -52,7 +52,7 @@ inline esp_err_t hwss_io_wiznet_spi_trans(hwss_io_t *io, spi_transaction_t *tran
     return ret;
 }
 
-inline hwss_io_wiznet_spi_t *hwss_io_new_wiznet_spi(const hwss_io_spi_config_t* config){
+static inline hwss_io_wiznet_spi_t *hwss_io_new_wiznet_spi(const hwss_io_spi_config_t* config){
     hwss_io_wiznet_spi_t *io_wiznet_spi=NULL;
     io_wiznet_spi = (hwss_io_wiznet_spi_t *) calloc(1,sizeof(hwss_io_wiznet_spi_t));
     if(io_wiznet_spi==NULL)
@@ -84,11 +84,11 @@ typedef struct{
 }hwss_io_wiznet_fast_parallel_t;
 
 
-inline bool IO_WIZNET_FAST_PARALLEL_LOCK(hwss_io_wiznet_fast_parallel_t *io){
+static inline bool IO_WIZNET_FAST_PARALLEL_LOCK(hwss_io_wiznet_fast_parallel_t *io){
     return (xSemaphoreTake(io->lock,pdMS_TO_TICKS(WIZNET_IO_LOCK_TIMEOUT_MS)) == pdTRUE);
 }
 
-inline bool IO_WIZNET_FAST_PARALLEL_UNLOCK(hwss_io_wiznet_fast_parallel_t *io){
+static inline bool IO_WIZNET_FAST_PARALLEL_UNLOCK(hwss_io_wiznet_fast_parallel_t *io){
     return (xSemaphoreGive(io->lock) == pdTRUE);
 }
 

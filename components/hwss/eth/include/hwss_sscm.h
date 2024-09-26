@@ -13,7 +13,6 @@ typedef enum{
 
 typedef struct{
     hwss_sscm_policy_t  policy;
-    uint8_t     sock_total_num;
     uint8_t     en_socknum;
 
     uint32_t    sock_polling_period_ms;

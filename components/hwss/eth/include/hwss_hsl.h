@@ -39,4 +39,6 @@ struct hwss_hsl_s{
     esp_err_t (*send_arp)(hwss_hsl_t *hsl);
 };
 
+
+
 hwss_hsl_t *hwss_hsl_new(hwss_sku_t sku,esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_hsl_config_t *config);

@@ -50,4 +50,28 @@ typedef struct{
     uart_config_t       uart_cfg;
 }hwss_io_uart_config_t;
 
+static inline esp_err_t hwss_io_init(hwss_io_t *io){
+    return io->init(io);
+}
+
+static inline esp_err_t hwss_io_deinit(hwss_io_t *io){
+    return io->deinit(io);
+}
+
+static inline esp_err_t hwss_io_read(hwss_io_t *io, uint32_t cmd, uint32_t addr, uint8_t *data){
+    return io->read(io,cmd,addr,data);
+}
+
+static inline esp_err_t hwss_io_write(hwss_io_t *io, uint32_t cmd, uint32_t addr, const uint8_t *data){
+    return io->write(io,cmd,addr,data);
+}
+
+static inline esp_err_t hwss_io_read_buf(hwss_io_t *io, uint32_t cmd, uint32_t addr, uint8_t *data, uint32_t data_len){
+    return io->read_buf(io,cmd,addr,data,data_len);
+}
+
+static inline esp_err_t hwss_io_write_buf(hwss_io_t *io, uint32_t cmd, uint32_t addr, const uint8_t *data, uint32_t data_len){
+    return io->write_buf(io,cmd,addr,data,data_len);
+}
+
 hwss_io_t *hwss_io_new(hwss_sku_t sku, hwss_io_type_t io_type, void *io_config);

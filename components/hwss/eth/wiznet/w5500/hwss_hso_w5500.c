@@ -49,11 +49,7 @@ typedef struct{
     
     uint8_t             txbuf_size_kb[W5500_SOCKNUM];
     uint8_t             rxbuf_size_kb[W5500_SOCKNUM];
-    uint16_t            irq_inter_tick;
     uint8_t             en_socknum;
-
-    uint8_t             *dma_gintr;
-    uint8_t             *dma_sintr;
 }hwss_hso_w5500_t;
 
 
@@ -64,8 +60,6 @@ typedef struct{
 static esp_err_t hwss_hso_w5500_init(hwss_hso_t *hso){
     esp_err_t ret=ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
-
-    ESP_GOTO_ON_ERROR(W5500_setINTLEVEL(hso_w5500->io,&(hso_w5500->irq_inter_tick)),err,TAG,"cannot write INTLEVEL");
 
     for(hwss_sockid_t id=0;id<hso_w5500->en_socknum;id++){
         ESP_GOTO_ON_ERROR(W5500_setSn_MR(hso_w5500->io,id,&w5500_sock_mode_default),err,TAG,"cannot write Sn_MR");
@@ -476,19 +470,9 @@ hwss_hso_t *hwss_hso_new_w5500(esp_event_loop_handle_t elp, hwss_io_t *io, hwss_
     hso->super.get_sock_state_raw=hwss_hso_w5500_get_sock_state_raw;
 
     hso->io=io;
-    if(config->irq_inter_time_us==0)
-        hso->irq_inter_tick=0;
-    else
-        hso->irq_inter_tick=config->irq_inter_time_us*150/4-1;
-    
     hso->en_socknum=config->en_socknum;
     memcpy(hso->txbuf_size_kb,config->tx_buffsize_kb,hso->en_socknum);
     memcpy(hso->rxbuf_size_kb,config->rx_buffsize_kb,hso->en_socknum);
-
-    hso->dma_gintr=heap_caps_malloc(1,MALLOC_CAP_DMA);
-    hso->dma_sintr=heap_caps_malloc(1,MALLOC_CAP_DMA);
-
-    ESP_GOTO_ON_FALSE(hso->dma_gintr&&hso->dma_sintr,NULL,err,TAG,"cannot malloc dma cache");
 
     return &hso->super;
 

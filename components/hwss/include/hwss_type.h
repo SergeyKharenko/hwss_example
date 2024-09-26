@@ -18,7 +18,7 @@ typedef enum{
 }hwss_io_type_t;
 
 typedef hwss_io_type_t      (hwss_io_types_t)[];
-inline bool hwss_io_type_supported(const hwss_io_types_t list, hwss_io_type_t type){
+static inline bool hwss_io_type_supported(const hwss_io_types_t list, hwss_io_type_t type){
     uint8_t idx=0;
     while(list[idx]!=HWSS_IO_TYPE_END){
         if(type == *list)
@@ -75,7 +75,7 @@ typedef uint8_t                 hwss_devid_t;
 typedef uint8_t                 hwss_sockid_t;
 typedef uint16_t                hwss_port_t;
 
-inline uint16_t hwss_htons(uint16_t x){
+static inline uint16_t hwss_htons(uint16_t x){
 #if BYTE_ORDER == LITTLE_ENDIAN
     return (((x) & (uint16_t) 0x00FFul)<<8)|(((x) & (uint16_t) 0xFF00ul)>>8);
 #else
@@ -83,7 +83,7 @@ inline uint16_t hwss_htons(uint16_t x){
 #endif
 }
 
-inline uint16_t hwss_ntohs(uint16_t x){
+static inline uint16_t hwss_ntohs(uint16_t x){
 #if BYTE_ORDER == LITTLE_ENDIAN
     return (((x) & (uint16_t) 0x00FFul)<<8)|(((x) & (uint16_t) 0xFF00ul)>>8);
 #else
@@ -103,8 +103,9 @@ typedef enum{
 #define HWSS_SOCK_INTR_DISCONN           1<<3
 #define HWSS_SOCK_INTR_CONNECT           1<<4
 
+typedef uint16_t hwss_chipver_t;
 
-// inline bool hwss_same_option_check(uint8_t num, bool opt,...){
+// static inline bool hwss_same_option_check(uint8_t num, bool opt,...){
 //     if(num<2)
 //         return true;
     

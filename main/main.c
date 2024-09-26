@@ -66,25 +66,25 @@ static void hwss_event_handler(void *arg, esp_event_base_t event_base,
         ESP_LOGW(TAG,"PING FAIL!");
         break;
 
-    case HWSS_HSO_EVENT_TIMEOUT:
+    case HWSS_SSCM_EVENT_TIMEOUT:
         ESP_LOGW(TAG,"HSO TIMEOUT");
         break;
     
-    case HWSS_HSO_EVENT_RECV:
+    case HWSS_SSCM_EVENT_RECV:
         break;
 
-    case HWSS_HSO_EVENT_SEND_OK:
+    case HWSS_SSCM_EVENT_SEND_OK:
         ESP_LOGI(TAG,"SEND OK");
         break;
 
     case HWSS_HIR_EVENT_TRIGGER:
         break;
 
-    case HWSS_HSO_EVENT_CONNECT:
+    case HWSS_SSCM_EVENT_CONNECT:
         ESP_LOGI(TAG,"SOCK CONNECT");
         break;
 
-    case HWSS_HSO_EVENT_DISCONN:
+    case HWSS_SSCM_EVENT_DISCONN:
         ESP_LOGW(TAG,"SOCK DISCONN");
         break;
 
@@ -139,24 +139,27 @@ void app_main(void)
     eth=hwss_eth_new(&eth_config);
 
     esp_event_handler_register_with(eth->elp_hdl,HWSS_EVENT_ANY_BASE,HWSS_EVENT_ANY_ID,hwss_event_handler,NULL);
-    esp_event_handler_register_with(eth->elp_hdl,HWSS_HSO_EVENT,HWSS_HSO_EVENT_RECV,recv_handler,NULL);
+    esp_event_handler_register_with(eth->elp_hdl,HWSS_SSCM_EVENT,HWSS_SSCM_EVENT_RECV,recv_handler,NULL);
 
     gpio_install_isr_service(0);
+    esp_event_loop_create_default();
 
     hwss_eth_init(eth);
+    hwss_eth_print_info(eth);
+
     hwss_eth_start(eth);
 
-    // hwss_ip_addr_t ip={10,0,0,5};
-    // hwss_ip_addr_t gip={10,0,0,1};
-    hwss_ip_addr_t ip={192,168,0,10};
-    hwss_ip_addr_t gip={192,168,0,1};
+    hwss_ip_addr_t ip={10,0,0,5};
+    hwss_ip_addr_t gip={10,0,0,1};
+    // hwss_ip_addr_t ip={192,168,0,10};
+    // hwss_ip_addr_t gip={192,168,0,1};
     hwss_ip_addr_t mask={255,255,255,0};
 
     eth->hnet->set_source_addr(eth->hnet,ip);
     eth->hnet->set_gateway_addr(eth->hnet,gip);
     eth->hnet->set_subnet_mask(eth->hnet,mask);
 
-    char *data="Hello World!";
+    char *data="Hello World!\n";
 
 
     /////// TCP TEST /////////
@@ -214,6 +217,7 @@ void app_main(void)
 ex:
 
     ESP_LOGE(TAG,"EXIT");
+    hwss_cctl_enable_ping_block(eth->cctl,true);
     /////// UDP TEST /////////
     // hwss_proto_t pro=HWSS_PROTO_UDP;
     // hwss_port_t sport=5590;

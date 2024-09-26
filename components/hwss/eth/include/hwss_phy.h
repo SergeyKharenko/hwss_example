@@ -29,4 +29,52 @@ struct hwss_phy_s {
     esp_err_t (*get_duplex)(hwss_phy_t *phy, hwss_duplex_t *duplex);
 };
 
+static inline esp_err_t hwss_phy_reset(hwss_phy_t *phy){
+    return phy->reset(phy);
+}
+
+static inline esp_err_t hwss_phy_init(hwss_phy_t *phy){
+    return phy->init(phy);
+}
+
+static inline esp_err_t hwss_phy_deinit(hwss_phy_t *phy){
+    return phy->deinit(phy);
+}
+
+static inline esp_err_t hwss_phy_start(hwss_phy_t *phy){
+    return phy->start(phy);
+}
+
+static inline esp_err_t hwss_phy_stop(hwss_phy_t *phy){
+    return phy->stop(phy);
+}
+
+static inline esp_err_t hwss_phy_autonego_ctrl(hwss_phy_t *phy, hwss_phy_autoneg_cmd_t cmd, bool *autonego_en_stat){
+    return phy->autonego_ctrl(phy,cmd,autonego_en_stat);
+}
+
+static inline esp_err_t hwss_phy_set_link(hwss_phy_t *phy, hwss_link_t link){
+    return phy->set_link(phy,link);
+}
+
+static inline esp_err_t hwss_phy_get_link(hwss_phy_t *phy, hwss_link_t *link){
+    return phy->get_link(phy,link);
+}
+
+static inline esp_err_t hwss_phy_set_speed(hwss_phy_t *phy, hwss_speed_t speed){
+    return phy->set_speed(phy,speed);
+}
+
+static inline esp_err_t hwss_phy_get_speed(hwss_phy_t *phy, hwss_speed_t *speed){
+    return phy->get_speed(phy,speed);
+}
+
+static inline esp_err_t hwss_phy_set_duplex(hwss_phy_t *phy, hwss_duplex_t duplex){
+    return phy->set_duplex(phy,duplex);
+}
+
+static inline esp_err_t hwss_phy_get_duplex(hwss_phy_t *phy, hwss_duplex_t *duplex){
+    return phy->get_duplex(phy,duplex);
+}
+
 hwss_phy_t *hwss_phy_new(hwss_sku_t sku, esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_phy_config_t *phy_config);

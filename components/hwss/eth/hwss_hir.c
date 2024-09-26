@@ -92,7 +92,7 @@ hwss_hir_t *hwss_hir_new(esp_event_loop_handle_t elp_hdl, const hwss_hir_config_
     hwss_hir_pro_t *hir=NULL;
 
     hir=calloc(1,sizeof(hwss_hir_pro_t));
-    ESP_GOTO_ON_FALSE(ret,NULL,err,TAG,"fail to calloc hwss_hir_pro_t");
+    ESP_GOTO_ON_FALSE(hir,NULL,err,TAG,"fail to calloc hwss_hir_pro_t");
 
     hir->io_num=config->io_num;
     hir->tri=config->tri;

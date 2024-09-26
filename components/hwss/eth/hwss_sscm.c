@@ -15,7 +15,7 @@ typedef struct{
 }hwss_sscm_timer_arg_t;
 
 struct hwss_sscm_pro_s{
-    hwss_sscm_t     super;
+    hwss_sscm_t         super;
 
     hwss_sscm_policy_t  policy;
     hwss_sscm_drv_t     *drv;
@@ -291,10 +291,11 @@ hwss_sscm_t *hwss_sscm_new(esp_event_loop_handle_t elp_hdl,hwss_sscm_drv_t *drv,
     hwss_sscm_t *ret=NULL;
     hwss_sscm_pro_t *sscm=NULL;
     sscm=calloc(1,sizeof(hwss_sscm_pro_t));
-    ESP_GOTO_ON_FALSE(ret,NULL,err,TAG,"fail to calloc sscm_pro");
+    ESP_GOTO_ON_FALSE(sscm,NULL,err,TAG,"fail to calloc sscm_pro");
 
     sscm->policy=config->policy;
-    sscm->sockact_sta_list=calloc(config->sock_total_num,sizeof(hwss_sockact_sta_t));
+    sscm->drv=drv;
+    sscm->sockact_sta_list=calloc(config->en_socknum,sizeof(hwss_sockact_sta_t));
     ESP_GOTO_ON_FALSE(sscm->sockact_sta_list,NULL,err,TAG,"fail to calloc sockact_sta_list");
 
     sscm->en_socknum=config->en_socknum;
@@ -306,10 +307,10 @@ hwss_sscm_t *hwss_sscm_new(esp_event_loop_handle_t elp_hdl,hwss_sscm_drv_t *drv,
     sscm->super.is_started=false;
 
     if(sscm->policy==HWSS_SSCM_POLICY_INTR_WAKEUP_POLLING){
-        sscm->socktimer_list=calloc(config->sock_total_num,sizeof(esp_timer_handle_t));
+        sscm->socktimer_list=calloc(config->en_socknum,sizeof(esp_timer_handle_t));
         ESP_GOTO_ON_FALSE(sscm->socktimer_list,NULL,err,TAG,"fail to calloc socktimer_list");
 
-        sscm->socktimer_args=calloc(config->sock_total_num,sizeof(hwss_sscm_timer_arg_t));
+        sscm->socktimer_args=calloc(config->en_socknum,sizeof(hwss_sscm_timer_arg_t));
         ESP_GOTO_ON_FALSE(sscm->socktimer_args,NULL,err,TAG,"fail to calloc socktimer_args");
 
         esp_timer_create_args_t timer_arg={
@@ -318,7 +319,7 @@ hwss_sscm_t *hwss_sscm_new(esp_event_loop_handle_t elp_hdl,hwss_sscm_drv_t *drv,
             .skip_unhandled_events=true
         };
 
-        for(hwss_devid_t id=0;id<config->sock_total_num;id++){
+        for(hwss_devid_t id=0;id<config->en_socknum;id++){
             sscm->socktimer_args[id].sscm_pro=sscm;
             sscm->socktimer_args[id].id=id;
             timer_arg.arg=sscm->socktimer_args+id;
@@ -327,13 +328,14 @@ hwss_sscm_t *hwss_sscm_new(esp_event_loop_handle_t elp_hdl,hwss_sscm_drv_t *drv,
     }
 
     esp_timer_create_args_t timer_arg={
-        .arg=ret,
+        .arg=sscm,
         .name="hwss_sscm_polling_timer",
         .callback=hwss_sscm_sock_polling_timer_cb,
         .skip_unhandled_events=true
     };
     ESP_GOTO_ON_FALSE(esp_timer_create(&timer_arg,&(sscm->sock_polling_timer))==ESP_OK,NULL,err,TAG,"cannot create polling timer");
 
+    return &sscm->super;
 err:
     return ret;
 }

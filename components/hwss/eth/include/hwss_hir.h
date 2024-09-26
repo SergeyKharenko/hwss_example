@@ -6,6 +6,7 @@
 typedef struct{
     gpio_num_t      io_num;
     hwss_trigger_t  tri;
+    uint16_t        irq_inter_time_us;
 }hwss_hir_config_t;
 
 typedef struct hwss_hir_s hwss_hir_t;
