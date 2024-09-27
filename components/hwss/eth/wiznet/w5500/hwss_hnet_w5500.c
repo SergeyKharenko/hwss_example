@@ -86,7 +86,6 @@ static esp_err_t hwss_hnet_w5500_set_retry_time(hwss_hnet_t *hnet, const uint16_
     uint16_t tick=*ms*10;
     hnet_w5500->retry_tick=tick;
 
-    tick=hwss_eth_htons(tick);
     ESP_GOTO_ON_ERROR(W5500_setRTR(hnet_w5500->io, &tick),err,TAG,"cannot write RTR");
     
 err:
@@ -98,7 +97,7 @@ static esp_err_t hwss_hnet_w5500_get_retry_time(hwss_hnet_t *hnet, uint16_t *ms)
     hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
     uint16_t tick=0;
     ESP_GOTO_ON_ERROR(W5500_getRTR(hnet_w5500->io, &tick),err,TAG,"cannot read RTR");
-    *ms=hwss_eth_ntohs(tick)/10;
+    *ms=tick/10;
 err:
     return ret;
 }
@@ -136,7 +135,6 @@ static esp_err_t hwss_hnet_w5500_get_unreachable_port(hwss_hnet_t *hnet, hwss_et
     hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
 
     ESP_GOTO_ON_ERROR(W5500_getUPORTR(hnet_w5500->io, port),err,TAG,"cannot read UPORTR");
-    *port=hwss_eth_ntohs(*port);
 err:
     return ret;
 }

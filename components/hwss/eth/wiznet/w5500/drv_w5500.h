@@ -53,11 +53,14 @@ static inline esp_err_t W5500_getSIPR(hwss_io_t *io, uint8_t *sipr){
 }
 
 static inline esp_err_t W5500_setINTLEVEL(hwss_io_t *io, const uint16_t *intlevel){
-    return io->write_buf(io,0,W5500_REG_INTLEVEL,(uint8_t *)intlevel,2);
+    uint16_t nv=hwss_eth_htons(*intlevel);
+    return io->write_buf(io,0,W5500_REG_INTLEVEL,(uint8_t *)&nv,2);
 }
 
 static inline esp_err_t W5500_getINTLEVEL(hwss_io_t *io, uint16_t *intlevel){
-    return io->read_buf(io,0,W5500_REG_INTLEVEL,(uint8_t *)intlevel,2);
+    esp_err_t ret=io->read_buf(io,0,W5500_REG_INTLEVEL,(uint8_t *)intlevel,2);
+    *intlevel=hwss_eth_ntohs(*intlevel);
+    return ret;
 }
 
 static inline esp_err_t W5500_setIR(hwss_io_t *io, const uint8_t *ir){
@@ -93,11 +96,14 @@ static inline esp_err_t W5500_getSIMR(hwss_io_t *io, uint8_t *simr){
 }
 
 static inline esp_err_t W5500_setRTR(hwss_io_t *io, const uint16_t *rtr){
-    return io->write_buf(io,0,W5500_REG_RTR,(uint8_t *)rtr,2);
+    uint16_t nv=hwss_eth_htons(*rtr);
+    return io->write_buf(io,0,W5500_REG_RTR,(uint8_t *)&nv,2);
 }
 
 static inline esp_err_t W5500_getRTR(hwss_io_t *io, uint16_t *rtr){
-    return io->read_buf(io,0,W5500_REG_RTR,(uint8_t *)rtr,2);
+    esp_err_t ret = io->read_buf(io,0,W5500_REG_RTR,(uint8_t *)rtr,2);
+    *rtr=hwss_eth_ntohs(*rtr);
+    return ret;
 }
 
 static inline esp_err_t W5500_setRCR(hwss_io_t *io, const uint8_t *rcr){
@@ -133,19 +139,25 @@ static inline esp_err_t W5500_getPHAR(hwss_io_t *io, uint8_t *phar){
 }
 
 static inline esp_err_t W5500_setPSID(hwss_io_t *io, const uint16_t *psid){
-    return io->write_buf(io,0,W5500_REG_PSID,(uint8_t *)psid,2);
+    uint16_t nv=hwss_eth_htons(*psid);
+    return io->write_buf(io,0,W5500_REG_PSID,(uint8_t *)&nv,2);
 }
 
 static inline esp_err_t W5500_getPSID(hwss_io_t *io, uint16_t *psid){
-    return io->read_buf(io,0,W5500_REG_PSID,(uint8_t *)psid,2);
+    esp_err_t ret= io->read_buf(io,0,W5500_REG_PSID,(uint8_t *)psid,2);
+    *psid=hwss_eth_ntohs(*psid);
+    return ret;
 }
 
 static inline esp_err_t W5500_setPMRU(hwss_io_t *io, const uint16_t *pmru){
-    return io->write_buf(io,0,W5500_REG_PMRU,(uint8_t *)pmru,2);
+    uint16_t nv=hwss_eth_htons(*pmru);
+    return io->write_buf(io,0,W5500_REG_PMRU,(uint8_t *)&nv,2);
 }
 
 static inline esp_err_t W5500_getPMRU(hwss_io_t *io, uint16_t *pmru){
-    return io->read_buf(io,0,W5500_REG_PMRU,(uint8_t *)pmru,2);
+    esp_err_t ret= io->read_buf(io,0,W5500_REG_PMRU,(uint8_t *)pmru,2);
+    *pmru=hwss_eth_ntohs(*pmru);
+    return ret;
 }
 
 static inline esp_err_t W5500_getUIPR(hwss_io_t *io, uint8_t* uipr){
@@ -153,7 +165,9 @@ static inline esp_err_t W5500_getUIPR(hwss_io_t *io, uint8_t* uipr){
 }
 
 static inline esp_err_t W5500_getUPORTR(hwss_io_t *io, uint16_t *uportr){
-    return io->read_buf(io,0,W5500_REG_UPORTR,(uint8_t *)uportr,2);
+    esp_err_t ret= io->read_buf(io,0,W5500_REG_UPORTR,(uint8_t *)uportr,2);
+    *uportr=hwss_eth_ntohs(*uportr);
+    return ret;
 }
 
 static inline esp_err_t W5500_setPHYCFGR(hwss_io_t *io, const uint8_t *phycfgr){
@@ -209,11 +223,14 @@ static inline esp_err_t W5500_getSn_SR(hwss_io_t *io, uint8_t sn, uint8_t *sr){
 }
 
 static inline esp_err_t W5500_setSn_PORT(hwss_io_t *io, uint8_t sn, const uint16_t *port){
-    return io->write_buf(io,0,W5500_REG_Sn_PORT(sn),(uint8_t *)port,2);
+    uint16_t nv=hwss_eth_htons(*port);
+    return io->write_buf(io,0,W5500_REG_Sn_PORT(sn),(uint8_t *)&nv,2);
 }
 
 static inline esp_err_t W5500_getSn_PORT(hwss_io_t *io, uint8_t sn, uint16_t *port){
-    return io->read_buf(io,0,W5500_REG_Sn_PORT(sn),(uint8_t *)port,2);
+    esp_err_t ret= io->read_buf(io,0,W5500_REG_Sn_PORT(sn),(uint8_t *)port,2);
+    *port=hwss_eth_ntohs(*port);
+    return ret;
 }
 
 static inline esp_err_t W5500_setSn_DHAR(hwss_io_t *io, uint8_t sn, const uint8_t *dhar){
@@ -233,19 +250,25 @@ static inline esp_err_t W5500_getSn_DIPR(hwss_io_t *io, uint8_t sn, uint8_t *dip
 }
 
 static inline esp_err_t W5500_setSn_DPORT(hwss_io_t *io, uint8_t sn, const uint16_t *dport){
-    return io->write_buf(io,0,W5500_REG_Sn_DPORT(sn),(uint8_t *)dport,2);
+    uint16_t nv=hwss_eth_htons(*dport);
+    return io->write_buf(io,0,W5500_REG_Sn_DPORT(sn),(uint8_t *)&nv,2);
 }
 
 static inline esp_err_t W5500_getSn_DPORT(hwss_io_t *io, uint8_t sn, uint16_t *dport){
-    return io->read_buf(io,0,W5500_REG_Sn_DPORT(sn),(uint8_t *)dport,2);
+    esp_err_t ret= io->read_buf(io,0,W5500_REG_Sn_DPORT(sn),(uint8_t *)dport,2);
+    *dport=hwss_eth_ntohs(*dport);
+    return ret;
 }
 
 static inline esp_err_t W5500_setSn_MSSR(hwss_io_t *io, uint8_t sn, const uint16_t *mss){
-    return io->write_buf(io,0,W5500_REG_Sn_MSSR(sn),(uint8_t *)mss, 2);
+    uint16_t nv=hwss_eth_htons(*mss);
+    return io->write_buf(io,0,W5500_REG_Sn_MSSR(sn),(uint8_t *)&nv, 2);
 }
 
 static inline esp_err_t W5500_getSn_MSSR(hwss_io_t *io, uint8_t sn, uint16_t *mss){
-    return io->read_buf(io,0,W5500_REG_Sn_MSSR(sn),(uint8_t *)mss, 2);
+    esp_err_t ret= io->read_buf(io,0,W5500_REG_Sn_MSSR(sn),(uint8_t *)mss, 2);
+    *mss=hwss_eth_ntohs(*mss);
+    return ret;
 }
 
 static inline esp_err_t W5500_setSn_TOS(hwss_io_t *io, uint8_t sn, const uint8_t *tos){
@@ -293,20 +316,25 @@ static inline esp_err_t W5500_getSn_TX_FSR(hwss_io_t *io, uint8_t sn, uint16_t *
         }
     }while(fsr_p!=fsr_c);
 
-    *fsr=fsr_c;
+    *fsr=hwss_eth_ntohs(fsr_c);
     return ESP_OK;
 }
 
 static inline esp_err_t W5500_getSn_TX_RD(hwss_io_t *io, uint8_t sn, uint16_t *txrd){
-    return io->read_buf(io,0,W5500_REG_Sn_TX_RD(sn),(uint8_t *)txrd,2);
+    esp_err_t ret= io->read_buf(io,0,W5500_REG_Sn_TX_RD(sn),(uint8_t *)txrd,2);
+    *txrd=hwss_eth_ntohs(*txrd);
+    return ret;
 }
 
 static inline esp_err_t W5500_setSn_TX_WR(hwss_io_t *io, uint8_t sn, const uint16_t *txwr){
-    return io->write_buf(io,0,W5500_REG_Sn_TX_WR(sn),(uint8_t *)txwr,2);
+    uint16_t nv=hwss_eth_htons(*txwr);
+    return io->write_buf(io,0,W5500_REG_Sn_TX_WR(sn),(uint8_t *)&nv,2);
 }
 
 static inline esp_err_t W5500_getSn_TX_WR(hwss_io_t *io, uint8_t sn, uint16_t *txwr){
-    return io->read_buf(io,0,W5500_REG_Sn_TX_WR(sn),(uint8_t *)txwr,2);
+    esp_err_t ret= io->read_buf(io,0,W5500_REG_Sn_TX_WR(sn),(uint8_t *)txwr,2);
+    *txwr=hwss_eth_ntohs(*txwr);
+    return ret;
 }
 
 static inline esp_err_t W5500_getSn_RX_RSR(hwss_io_t *io, uint8_t sn, uint16_t *rsr){
@@ -322,28 +350,36 @@ static inline esp_err_t W5500_getSn_RX_RSR(hwss_io_t *io, uint8_t sn, uint16_t *
         }
     }while(rsr_p!=rsr_c);
 
-    *rsr=rsr_c;
+    *rsr=hwss_eth_ntohs(rsr_c);
     return ESP_OK;
 }
 
 static inline esp_err_t W5500_setSn_RX_RD(hwss_io_t *io, uint8_t sn, const uint16_t *rxrd){
-    return io->write_buf(io,0,W5500_REG_Sn_RX_RD(sn),(uint8_t *)rxrd,2);
+    uint16_t nv=hwss_eth_htons(*rxrd);
+    return io->write_buf(io,0,W5500_REG_Sn_RX_RD(sn),(uint8_t *)&nv,2);
 }
 
 static inline esp_err_t W5500_getSn_RX_RD(hwss_io_t *io, uint8_t sn, uint16_t *rxrd){
-    return io->read_buf(io,0,W5500_REG_Sn_RX_RD(sn),(uint8_t *)rxrd,2);
+    esp_err_t ret= io->read_buf(io,0,W5500_REG_Sn_RX_RD(sn),(uint8_t *)rxrd,2);
+    *rxrd=hwss_eth_ntohs(*rxrd);
+    return ret;
 }
 
 static inline esp_err_t W5500_getSn_RX_WR(hwss_io_t *io, uint8_t sn, uint16_t *rxwr){
-    return io->read_buf(io,0,W5500_REG_Sn_RX_WR(sn),(uint8_t *)rxwr,2);
+    esp_err_t ret= io->read_buf(io,0,W5500_REG_Sn_RX_WR(sn),(uint8_t *)rxwr,2);
+    *rxwr=hwss_eth_ntohs(*rxwr);
+    return ret;
 }
 
 static inline esp_err_t W5500_setSn_FRAG(hwss_io_t *io, uint8_t sn, const uint16_t *frag){
-    return io->write_buf(io,0,W5500_REG_Sn_FRAG(sn),(uint8_t *)frag, 2);
+    uint16_t nv=hwss_eth_htons(*frag);
+    return io->write_buf(io,0,W5500_REG_Sn_FRAG(sn),(uint8_t *)&nv, 2);
 }
 
 static inline esp_err_t W5500_getSn_FRAG(hwss_io_t *io, uint8_t sn, uint16_t *frag){
-    return io->read_buf(io,0,W5500_REG_Sn_FRAG(sn),(uint8_t *)frag, 2);
+    esp_err_t ret= io->read_buf(io,0,W5500_REG_Sn_FRAG(sn),(uint8_t *)frag, 2);
+    *frag=hwss_eth_ntohs(*frag);
+    return ret;
 }
 
 static inline esp_err_t W5500_setSn_KPALVTR(hwss_io_t *io, uint8_t sn, const uint8_t *kpalvt){

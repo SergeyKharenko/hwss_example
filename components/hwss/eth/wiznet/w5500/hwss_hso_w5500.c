@@ -126,10 +126,8 @@ static esp_err_t hwss_hso_w5500_write_tx_buffer(hwss_hso_t *hso, hwss_eth_sockid
     uint16_t txwr=0;
     ESP_GOTO_ON_ERROR(W5500_getSn_TX_WR(hso_w5500->io,id,&txwr),err,TAG,"cannot read Sn_TX_WR");
 
-    txwr=hwss_eth_ntohs(txwr);
     ESP_GOTO_ON_ERROR(W5500_writeSn_TXBUF(hso_w5500->io,id,txwr,data,len),err,TAG,"cannot write Sn_TXBUF");
     txwr+=len;
-    txwr=hwss_eth_htons(txwr);
     ESP_GOTO_ON_ERROR(W5500_setSn_TX_WR(hso_w5500->io,id,&txwr),err,TAG,"cannot update Sn_TX_WR");
 
 err:
@@ -145,11 +143,9 @@ static esp_err_t hwss_hso_w5500_read_rx_buffer(hwss_hso_t *hso, hwss_eth_sockid_
     
     uint16_t rxrd=0;
     ESP_GOTO_ON_ERROR(W5500_getSn_RX_RD(hso_w5500->io,id,&rxrd),err,TAG,"cannot read Sn_RX_RD");
-    rxrd=hwss_eth_ntohs(rxrd);
 
     ESP_GOTO_ON_ERROR(W5500_readSn_RXBUF(hso_w5500->io,id,rxrd,data,len),err,TAG,"cannot read Sn_RXBUF");
     rxrd+=len;
-    rxrd=hwss_eth_htons(rxrd);
     ESP_GOTO_ON_ERROR(W5500_setSn_RX_RD(hso_w5500->io,id,&rxrd),err,TAG,"cannot update Sn_RX_RD");
 err:
     return ret;
@@ -171,7 +167,6 @@ static esp_err_t hwss_hso_w5500_get_tx_free_length(hwss_hso_t *hso, hwss_eth_soc
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
     ESP_GOTO_ON_ERROR(W5500_getSn_TX_FSR(hso_w5500->io,id,len),err,TAG,"cannot read Sn_TX_FSR");
-    *len=hwss_eth_ntohs(*len);
 err:
     return ret;
 }
@@ -181,7 +176,6 @@ static esp_err_t hwss_hso_w5500_get_rx_length(hwss_hso_t *hso, hwss_eth_sockid_t
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
     ESP_GOTO_ON_ERROR(W5500_getSn_RX_RSR(hso_w5500->io,id,len),err,TAG,"cannot read Sn_RX_RSR");
-    *len=hwss_eth_ntohs(*len);
 err:
     return ret;
 }
@@ -301,8 +295,7 @@ static esp_err_t hwss_hso_w5500_set_sock_source_port(hwss_hso_t *hso, hwss_eth_s
     esp_err_t ret= ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
-    uint16_t nport=hwss_eth_htons(*port);
-    ESP_GOTO_ON_ERROR(W5500_setSn_PORT(hso_w5500->io,id,&nport),err,TAG,"cannot write Sn_PORT");
+    ESP_GOTO_ON_ERROR(W5500_setSn_PORT(hso_w5500->io,id,port),err,TAG,"cannot write Sn_PORT");
 err:
     return ret;
 }
@@ -312,7 +305,6 @@ static esp_err_t hwss_hso_w5500_get_sock_source_port(hwss_hso_t *hso, hwss_eth_s
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
     ESP_GOTO_ON_ERROR(W5500_getSn_PORT(hso_w5500->io,id,port),err,TAG,"cannot read Sn_PORT");
-    *port=hwss_eth_ntohs(*port);
 err:
     return ret;
 }
@@ -321,8 +313,7 @@ static esp_err_t hwss_hso_w5500_set_sock_dest_port(hwss_hso_t *hso, hwss_eth_soc
     esp_err_t ret= ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
-    uint16_t nport=hwss_eth_htons(*port);
-    ESP_GOTO_ON_ERROR(W5500_setSn_DPORT(hso_w5500->io,id,&nport),err,TAG,"cannot write Sn_DPORT");
+    ESP_GOTO_ON_ERROR(W5500_setSn_DPORT(hso_w5500->io,id,port),err,TAG,"cannot write Sn_DPORT");
 err:
     return ret;
 }
@@ -332,7 +323,6 @@ static esp_err_t hwss_hso_w5500_get_sock_dest_port(hwss_hso_t *hso, hwss_eth_soc
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
     ESP_GOTO_ON_ERROR(W5500_getSn_DPORT(hso_w5500->io,id,port),err,TAG,"cannot read Sn_DPORT");
-    *port=hwss_eth_ntohs(*port);
 err:
     return ret;
 }

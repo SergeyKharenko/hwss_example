@@ -60,9 +60,15 @@
 
 #define HWSS_IP4ADDR_STRLEN_MAX             IP4ADDR_STRLEN_MAX
 
+#define hwss_ip4_addr_t                     esp_ip4_addr_t
+#define hwss_ip6_addr_t                     esp_ip6_addr_t
 
-// #define hwss_ip4_addr_t                     esp_ip4_addr_t
-// #define hwss_ip6_addr_t                     esp_ip6_addr_t
+#define HWSS_IP6_ADDR_IS_UNKNOWN            ESP_IP6_ADDR_IS_UNKNOWN
+#define HWSS_IP6_ADDR_IS_GLOBAL             ESP_IP6_ADDR_IS_GLOBAL
+#define HWSS_IP6_ADDR_IS_LINK_LOCAL         ESP_IP6_ADDR_IS_LINK_LOCAL
+#define HWSS_IP6_ADDR_IS_SITE_LOCAL         ESP_IP6_ADDR_IS_SITE_LOCAL
+#define HWSS_IP6_ADDR_IS_UNIQUE_LOCAL       ESP_IP6_ADDR_IS_UNIQUE_LOCAL
+#define HWSS_IP6_ADDR_IS_IPV4_MAPPED_IPV6   ESP_IP6_ADDR_IS_IPV4_MAPPED_IPV6
 
 #define hwss_ip6_addr_type_t                esp_ip6_addr_type_t
 

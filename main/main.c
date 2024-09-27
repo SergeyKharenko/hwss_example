@@ -100,16 +100,16 @@ static void recv_handler(void *arg, esp_event_base_t event_base,
                         int32_t event_id, void *event_data){
     uint16_t len=0;
     eth->hso->get_rx_length(eth->hso,0,&len);
-    eth->hso->drop_rx_buffer(eth->hso,0);
-    ESP_LOGI(TAG,"LEN: %u",len);
+    // eth->hso->drop_rx_buffer(eth->hso,0);
+    // ESP_LOGI(TAG,"LEN: %u",len);
 
-    // eth->hso->read_rx_buffer(eth->hso,0,cache,len);
+    eth->hso->read_rx_buffer(eth->hso,0,cache,len);
     eth->hso->ctrl_sock(eth->hso,0,HWSS_HSO_SOCKCTRL_RECV);
-    // cache[len]='\0';
-    // ESP_LOGI(TAG,"Recv:\t %s",cache);
+    cache[len]='\0';
+    ESP_LOGI(TAG,"Recv:\t %s",cache);
 
-    // eth->hso->write_tx_buffer(eth->hso,0,(uint8_t *)cache,len);
-    // eth->hso->ctrl_sock(eth->hso,0,HWSS_HSO_SOCKCTRL_SEND);
+    eth->hso->write_tx_buffer(eth->hso,0,(uint8_t *)cache,len);
+    eth->hso->ctrl_sock(eth->hso,0,HWSS_HSO_SOCKCTRL_SEND);
 }
 
 void app_main(void)
@@ -153,10 +153,10 @@ void app_main(void)
 
     hwss_eth_start(eth);
 
-    hwss_eth_ip4_addr_t ip={10,0,0,5};
-    hwss_eth_ip4_addr_t gip={10,0,0,1};
-    // hwss_eth_ip4_addr_t ip={192,168,0,10};
-    // hwss_eth_ip4_addr_t gip={192,168,0,1};
+    // hwss_eth_ip4_addr_t ip={10,0,0,5};
+    // hwss_eth_ip4_addr_t gip={10,0,0,1};
+    hwss_eth_ip4_addr_t ip={192,168,0,10};
+    hwss_eth_ip4_addr_t gip={192,168,0,1};
     hwss_eth_ip4_addr_t mask={255,255,255,0};
 
     eth->hnet->set_source_addr(eth->hnet,ip);
@@ -202,26 +202,26 @@ void app_main(void)
     }
     ESP_LOGI(TAG,"sock listening");
 
+    uint8_t rsta;
+    while(1){
+        eth->hso->get_sock_state_raw(eth->hso,0,&rsta);
+        // switch (socksta)
+        // {
+        // case HWSS_HSO_SOCK_TCP_LISTEN:
+        //     break;
 
-    // while(1){
-    //     eth->hso->get_sock_state(eth->hso,0,&socksta);
-    //     switch (socksta)
-    //     {
-    //     case HWSS_HSO_SOCK_TCP_LISTEN:
-    //         break;
-
-    //     case HWSS_HSO_SOCK_TCP_ESTAB:
-    //         eth->hso->write_tx_buffer(eth->hso,0,(uint8_t *)tcache,strlen(data));
-    //         eth->hso->ctrl_sock(eth->hso,0,HWSS_HSO_SOCKCTRL_SEND);
-    //         break;
-    //     default:
-    //         ESP_LOGW(TAG,"EXIT");
-    //         goto ex;
-    //         break;
-    //     }
-    //     ESP_LOGI(TAG,"LOOP");
-    //     vTaskDelay(pdMS_TO_TICKS(500));
-    // }
+        // case HWSS_HSO_SOCK_TCP_ESTAB:
+        //     eth->hso->write_tx_buffer(eth->hso,0,(uint8_t *)tcache,strlen(data));
+        //     eth->hso->ctrl_sock(eth->hso,0,HWSS_HSO_SOCKCTRL_SEND);
+        //     break;
+        // default:
+        //     ESP_LOGW(TAG,"EXIT");
+        //     goto ex;
+        //     break;
+        // }
+        ESP_LOGI(TAG,"STA: %X",rsta);
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
 
 
 

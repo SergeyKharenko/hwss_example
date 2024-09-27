@@ -88,13 +88,10 @@ typedef enum{
 
 typedef uint16_t hwss_chipver_t;
 
-
 #if _BYTE_ORDER == _LITTLE_ENDIAN
-// #define hwss_eth_htons(x)                       __builtin_bswap16(x)
-// #define hwss_eth_ntohs(x)                       __builtin_bswap16(x)
+#define hwss_eth_htons(x)                       __builtin_bswap16(x)
+#define hwss_eth_ntohs(x)                       __builtin_bswap16(x)
 
-#define hwss_eth_htons(x)                       (uint16_t)((x&0x00FF)<<8)+(x>>8)
-#define hwss_eth_ntohs(x)                       (uint16_t)((x&0x00FF)<<8)+(x>>8)
 #else
 #define hwss_eth_htons(x)                       (uint16_t)(x)
 #define hwss_eth_ntohs(x)                       (uint16_t)(x)

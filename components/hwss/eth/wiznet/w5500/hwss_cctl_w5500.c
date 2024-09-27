@@ -150,7 +150,6 @@ esp_err_t hwss_cctl_w5500_set_intr_wait_time(hwss_cctl_t *cctl, const uint16_t *
         ticks=0;
     else
         ticks=*us*150/4-1;
-    ticks=hwss_eth_htons(ticks);
     ESP_GOTO_ON_ERROR(W5500_setINTLEVEL(cctl_w5500->io,&(ticks)),err,TAG,"cannot write INTLEVEL");
 
 err:
