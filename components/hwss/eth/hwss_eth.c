@@ -80,7 +80,7 @@ static void hwss_eth_sscm_state_handler(void *arg, esp_event_base_t event_base,
                                         int32_t event_id, void *event_data){
     hwss_eth_t *eth=(hwss_eth_t *)arg;
     hwss_eth_pro_t *eth_pro=__containerof(eth,hwss_eth_pro_t,super);
-    hwss_sockid_t id=*(hwss_sockid_t *)event_data;
+    hwss_eth_sockid_t id=*(hwss_eth_sockid_t *)event_data;
     EventBits_t rbits;
 
     switch(event_id){
@@ -193,7 +193,7 @@ esp_err_t hwss_eth_init(hwss_eth_t *eth){
 
     ESP_GOTO_ON_ERROR(hwss_cvr_self_test(eth->cvr),err,TAG,"fail to pass selftest");
 
-    for(hwss_sockid_t id=0;id<eth_pro->en_socknum;id++)
+    for(hwss_eth_sockid_t id=0;id<eth_pro->en_socknum;id++)
         eth_pro->sock_egps[id]=xEventGroupCreate();
     eth_pro->global_egp=xEventGroupCreate();
     
@@ -218,7 +218,7 @@ esp_err_t hwss_eth_deinit(hwss_eth_t *eth){
         ESP_GOTO_ON_ERROR(hwss_hppe_deinit(eth->opt.hppe),err,TAG,"fail to deinit hppe");
 
     vEventGroupDelete(eth_pro->global_egp);
-    for(hwss_sockid_t id=0;id<eth_pro->en_socknum;id++)
+    for(hwss_eth_sockid_t id=0;id<eth_pro->en_socknum;id++)
         vEventGroupDelete(eth_pro->sock_egps[id]);
     
 err:
@@ -266,13 +266,13 @@ esp_err_t hwss_eth_print_info(const hwss_eth_t *eth){
 
     switch (eth->sku)
     {
-        case HWSS_SKU_CH394:
-        case HWSS_SKU_CH395:
+        case HWSS_ETH_SKU_CH394:
+        case HWSS_ETH_SKU_CH395:
             ESP_LOGI(TAG,"Vendor:\t WCH");
             break;
 
-        case HWSS_SKU_W5100S:
-        case HWSS_SKU_W5500:
+        case HWSS_ETH_SKU_W5100S:
+        case HWSS_ETH_SKU_W5500:
             ESP_LOGI(TAG,"Vendor:\t Wiznet");
             break;
 
@@ -286,13 +286,13 @@ esp_err_t hwss_eth_print_info(const hwss_eth_t *eth){
 
     switch (eth->sku)
     {
-        case HWSS_SKU_W5500:
+        case HWSS_ETH_SKU_W5500:
             ESP_LOGI(TAG,"Model:\t W5500");
             ESP_LOGI(TAG,"MAX SOCKs:\t 8");
             ESP_LOGI(TAG,"Features: \t PPPOE");
             break;
 
-        case HWSS_SKU_W5100S:
+        case HWSS_ETH_SKU_W5100S:
             ESP_LOGI(TAG,"Model:\t W5100S");
             ESP_LOGI(TAG,"MAX SOCKs:\t 4");
             ESP_LOGI(TAG,"Features: \t SOCK-less Ping&ARP, PPPOE");

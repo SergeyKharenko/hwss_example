@@ -1,7 +1,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_check.h"
-#include "hwss_type.h"
+#include "hwss_eth_type.h"
 #include "hwss_eth_event.h"
 #include "hwss_sscm.h"
 
@@ -11,7 +11,7 @@ typedef struct hwss_sscm_pro_s hwss_sscm_pro_t;
 
 typedef struct{
     hwss_sscm_pro_t *sscm_pro;
-    hwss_sockid_t   id;
+    hwss_eth_sockid_t   id;
 }hwss_sscm_timer_arg_t;
 
 struct hwss_sscm_pro_s{
@@ -36,34 +36,34 @@ struct hwss_sscm_pro_s{
     hwss_sscm_timer_arg_t   *socktimer_args;
 };
 
-static esp_err_t hwss_sscm_sock_event_post(hwss_sscm_pro_t *sscm_pro, hwss_sockid_t id, uint8_t sintr){
+static inline esp_err_t hwss_sscm_sock_event_post(hwss_sscm_pro_t *sscm_pro, hwss_eth_sockid_t id, uint8_t sintr){
     esp_err_t ret=ESP_OK;
 
     if(sintr&HWSS_SOCK_INTR_SEND_OK)
         ESP_GOTO_ON_ERROR(esp_event_post_to(sscm_pro->elp_hdl,HWSS_SSCM_EVENT,HWSS_SSCM_EVENT_SEND_OK,
-                    (void *)&id,sizeof(hwss_sockid_t),0),err,TAG,"fail to post event");
+                    (void *)&id,sizeof(hwss_eth_sockid_t),0),err,TAG,"fail to post event");
 
     if(sintr&HWSS_SOCK_INTR_TIMEOUT)
         ESP_GOTO_ON_ERROR(esp_event_post_to(sscm_pro->elp_hdl,HWSS_SSCM_EVENT,HWSS_SSCM_EVENT_TIMEOUT,
-                    (void *)&id,sizeof(hwss_sockid_t),0),err,TAG,"fail to post event");
+                    (void *)&id,sizeof(hwss_eth_sockid_t),0),err,TAG,"fail to post event");
 
     if(sintr&HWSS_SOCK_INTR_RECV)
         ESP_GOTO_ON_ERROR(esp_event_post_to(sscm_pro->elp_hdl,HWSS_SSCM_EVENT,HWSS_SSCM_EVENT_RECV,
-                    (void *)&id,sizeof(hwss_sockid_t),0),err,TAG,"fail to post event");
+                    (void *)&id,sizeof(hwss_eth_sockid_t),0),err,TAG,"fail to post event");
 
     if(sintr&HWSS_SOCK_INTR_DISCONN)
         ESP_GOTO_ON_ERROR(esp_event_post_to(sscm_pro->elp_hdl,HWSS_SSCM_EVENT,HWSS_SSCM_EVENT_DISCONN,
-                    (void *)&id,sizeof(hwss_sockid_t),0),err,TAG,"fail to post event");
+                    (void *)&id,sizeof(hwss_eth_sockid_t),0),err,TAG,"fail to post event");
 
     if(sintr&HWSS_SOCK_INTR_CONNECT)
         ESP_GOTO_ON_ERROR(esp_event_post_to(sscm_pro->elp_hdl,HWSS_SSCM_EVENT,HWSS_SSCM_EVENT_CONNECT,
-                    (void *)&id,sizeof(hwss_sockid_t),0),err,TAG,"fail to post event");
+                    (void *)&id,sizeof(hwss_eth_sockid_t),0),err,TAG,"fail to post event");
 
 err:
     return ret;
 }
 
-static void hwss_sscm_sock_polling_timer_cb(void *args){
+static void IRAM_ATTR hwss_sscm_sock_polling_timer_cb(void *args){
     hwss_sscm_pro_t *sscm_pro=(hwss_sscm_pro_t *)args;
     hwss_sscm_drv_t *sscm_drv=sscm_pro->drv;
     uint8_t gintr=0,sintr=0;
@@ -73,21 +73,26 @@ static void hwss_sscm_sock_polling_timer_cb(void *args){
         return;
     }
 
-    for(hwss_sockid_t id=0;id<sscm_pro->en_socknum;id++){
-        if(gintr&0x01&&sscm_pro->sockact_sta_list[id]==HWSS_SOCKACT_ACTIVE){
-            if(sscm_drv->get_sock_intr(sscm_drv,id,&sintr)!=ESP_OK){
-                ESP_LOGE(TAG,"cannot get socket%u interrupt",id);
-                return;
-            }
+    for(hwss_eth_sockid_t id=0;id<sscm_pro->en_socknum;id++){
+        if(!(gintr&0x01))
+            continue;
+        if(sscm_pro->sockact_sta_list[id]==HWSS_SOCKACT_IDLE)
+            continue;
 
-            if(hwss_sscm_sock_event_post(sscm_pro,id,sintr)!=ESP_OK)
-                return;
+        if(sscm_drv->get_sock_intr(sscm_drv,id,&sintr)!=ESP_OK){
+            ESP_LOGE(TAG,"cannot get socket%u interrupt",id);
+            return;
+        }
 
-            if(sscm_drv->clear_sock_intr(sscm_drv,id)!=ESP_OK){
-                ESP_LOGE(TAG,"fail to clear sock%u interrupt",id);
-                return;
-            }
+        if(hwss_sscm_sock_event_post(sscm_pro,id,sintr)!=ESP_OK)
+            return;
 
+        if(sscm_drv->clear_sock_intr(sscm_drv,id)!=ESP_OK){
+            ESP_LOGE(TAG,"fail to clear sock%u interrupt",id);
+            return;
+        }
+
+        if(sscm_pro->sockact_sta_list[id]==HWSS_SOCKACT_ACTIVE){
             if(esp_timer_restart(sscm_pro->socktimer_list[id],sscm_pro->sock_active_threshold_ms*1000)!=ESP_OK){
                 ESP_LOGE(TAG,"fail to restart sock%u timer",id);
                 return;
@@ -101,7 +106,7 @@ static void hwss_sscm_sockact_timer_cb(void *args){
     hwss_sscm_timer_arg_t *timer_arg=(hwss_sscm_timer_arg_t *)args;
     hwss_sscm_pro_t *sscm_pro=timer_arg->sscm_pro;
     hwss_sscm_drv_t *sscm_drv=sscm_pro->drv;
-    hwss_sockid_t id=timer_arg->id;
+    hwss_eth_sockid_t id=timer_arg->id;
 
     sscm_pro->active_sock_num--;
     if(sscm_pro->active_sock_num==0)
@@ -143,7 +148,7 @@ esp_err_t hwss_sscm_start(hwss_sscm_t *sscm){
     
     switch(sscm_pro->policy){
         case HWSS_SSCM_POLICY_NO_INTR_POLLING:
-            for(hwss_sockid_t id=0;id<sscm_pro->en_socknum;id++){
+            for(hwss_eth_sockid_t id=0;id<sscm_pro->en_socknum;id++){
                 sscm_pro->sockact_sta_list[id]=HWSS_SOCKACT_GENERIC;
                 ESP_GOTO_ON_ERROR(sscm_drv->clear_sock_intr(sscm_drv,id),err,TAG,"cannot clear sock%u intr",id);
                 ESP_GOTO_ON_ERROR(sscm_drv->set_sock_intr_enable(sscm_drv,id,true),err,TAG,"cannot enable sock%u intr",id);
@@ -156,7 +161,7 @@ esp_err_t hwss_sscm_start(hwss_sscm_t *sscm){
 
         case HWSS_SSCM_POLICY_INTR_WAKEUP_POLLING:
             ESP_GOTO_ON_ERROR(sscm_drv->set_sock_global_intr_enable_all(sscm_drv,false),err,TAG,"fail to disable global socket intr");
-            for(hwss_sockid_t id=0;id<sscm_pro->en_socknum;id++){
+            for(hwss_eth_sockid_t id=0;id<sscm_pro->en_socknum;id++){
                 sscm_pro->sockact_sta_list[id]=HWSS_SOCKACT_IDLE;
                 ESP_GOTO_ON_ERROR(sscm_drv->clear_sock_intr(sscm_drv,id),err,TAG,"cannot clear sock%u intr",id);
                 ESP_GOTO_ON_ERROR(sscm_drv->set_sock_intr_enable(sscm_drv,id,true),err,TAG,"cannot enable sock%u intr",id);
@@ -189,7 +194,7 @@ esp_err_t hwss_sscm_stop(hwss_sscm_t *sscm){
                 ESP_GOTO_ON_ERROR(esp_timer_stop(sscm_pro->sock_polling_timer),err,TAG,"fail to stop sock polling timer");
             
             if(sscm_pro->active_sock_num!=0){
-                for(hwss_sockid_t id=0;id<sscm_pro->en_socknum;id++){
+                for(hwss_eth_sockid_t id=0;id<sscm_pro->en_socknum;id++){
                     if(sscm_pro->sockact_sta_list[id]==HWSS_SOCKACT_ACTIVE){
                         if(esp_timer_is_active(sscm_pro->socktimer_list[id]))
                             ESP_GOTO_ON_ERROR(esp_timer_stop(sscm_pro->socktimer_list[id]),
@@ -207,7 +212,7 @@ err:
     return ret;
 }
 
-esp_err_t hwss_sscm_set_sock_state(hwss_sscm_t *sscm, hwss_sockid_t id, const hwss_sockact_sta_t *state){
+esp_err_t hwss_sscm_set_sock_state(hwss_sscm_t *sscm, hwss_eth_sockid_t id, const hwss_sockact_sta_t *state){
     esp_err_t ret=ESP_OK;
     hwss_sscm_pro_t *sscm_pro=__containerof(sscm,hwss_sscm_pro_t,super);
     hwss_sscm_drv_t *sscm_drv=sscm_pro->drv;
@@ -245,7 +250,7 @@ err:
     return ret;    
 }
 
-esp_err_t hwss_sscm_get_sock_state(hwss_sscm_t *sscm, hwss_sockid_t id, hwss_sockact_sta_t *state){
+esp_err_t hwss_sscm_get_sock_state(hwss_sscm_t *sscm, hwss_eth_sockid_t id, hwss_sockact_sta_t *state){
     hwss_sscm_pro_t *sscm_pro=__containerof(sscm,hwss_sscm_pro_t,super);
     *state=sscm_pro->sockact_sta_list[id];
     return ESP_OK;
@@ -259,7 +264,7 @@ esp_err_t hwss_sscm_intr_process(hwss_sscm_t *sscm){
 
     ESP_GOTO_ON_ERROR(sscm_drv->get_sock_global_intr(sscm_drv,&gintr),err,TAG,"cannot get socket global interrupt");
 
-    for(hwss_sockid_t id=0;id<sscm_pro->en_socknum;id++){
+    for(hwss_eth_sockid_t id=0;id<sscm_pro->en_socknum;id++){
         if(gintr&0x01 && sscm_pro->sockact_sta_list[id]==HWSS_SOCKACT_IDLE){
             ESP_GOTO_ON_ERROR(sscm_drv->get_sock_intr(sscm_drv,id,&sintr),err,TAG,"cannot read sock%u status",id);
 
@@ -319,7 +324,7 @@ hwss_sscm_t *hwss_sscm_new(esp_event_loop_handle_t elp_hdl,hwss_sscm_drv_t *drv,
             .skip_unhandled_events=true
         };
 
-        for(hwss_devid_t id=0;id<config->en_socknum;id++){
+        for(hwss_eth_sockid_t id=0;id<config->en_socknum;id++){
             sscm->socktimer_args[id].sscm_pro=sscm;
             sscm->socktimer_args[id].id=id;
             timer_arg.arg=sscm->socktimer_args+id;

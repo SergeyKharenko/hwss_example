@@ -42,7 +42,7 @@ hwss_io_spi_config_t cfg={
 
 hwss_eth_t *eth;
 
-hwss_mac_addr_t dest_mac;
+hwss_eth_mac_addr_t dest_mac;
 
 static void hwss_event_handler(void *arg, esp_event_base_t event_base,
                               int32_t event_id, void *event_data){
@@ -100,12 +100,16 @@ static void recv_handler(void *arg, esp_event_base_t event_base,
                         int32_t event_id, void *event_data){
     uint16_t len=0;
     eth->hso->get_rx_length(eth->hso,0,&len);
-    ESP_LOGI(TAG,"RECV: %u",len);
-    eth->hso->drop_rx_buffer(eth->hso,0,len);
-    
-    // hso->read_rx_buffer(hso,0,cache,len);
-    // ESP_LOGI(TAG,"IP:%u.%u.%u.%u",cache[0],cache[1],cache[2],cache[3]);
+    eth->hso->drop_rx_buffer(eth->hso,0);
+    ESP_LOGI(TAG,"LEN: %u",len);
+
+    // eth->hso->read_rx_buffer(eth->hso,0,cache,len);
     eth->hso->ctrl_sock(eth->hso,0,HWSS_HSO_SOCKCTRL_RECV);
+    // cache[len]='\0';
+    // ESP_LOGI(TAG,"Recv:\t %s",cache);
+
+    // eth->hso->write_tx_buffer(eth->hso,0,(uint8_t *)cache,len);
+    // eth->hso->ctrl_sock(eth->hso,0,HWSS_HSO_SOCKCTRL_SEND);
 }
 
 void app_main(void)
@@ -149,11 +153,11 @@ void app_main(void)
 
     hwss_eth_start(eth);
 
-    hwss_ip_addr_t ip={10,0,0,5};
-    hwss_ip_addr_t gip={10,0,0,1};
-    // hwss_ip_addr_t ip={192,168,0,10};
-    // hwss_ip_addr_t gip={192,168,0,1};
-    hwss_ip_addr_t mask={255,255,255,0};
+    hwss_eth_ip4_addr_t ip={10,0,0,5};
+    hwss_eth_ip4_addr_t gip={10,0,0,1};
+    // hwss_eth_ip4_addr_t ip={192,168,0,10};
+    // hwss_eth_ip4_addr_t gip={192,168,0,1};
+    hwss_eth_ip4_addr_t mask={255,255,255,0};
 
     eth->hnet->set_source_addr(eth->hnet,ip);
     eth->hnet->set_gateway_addr(eth->hnet,gip);
@@ -161,12 +165,17 @@ void app_main(void)
 
     char *data="Hello World!\n";
 
+    char *tcache=heap_caps_aligned_alloc(4,strlen(data)+1,MALLOC_CAP_DMA);
+    memcpy(tcache,data,strlen(data));
 
     /////// TCP TEST /////////
     hwss_proto_t pro=HWSS_PROTO_TCP;
-    hwss_port_t sport=5590;
+    hwss_eth_port_t sport=5590;
     eth->hso->set_sock_proto(eth->hso,0,&pro);
     eth->hso->set_sock_source_port(eth->hso,0,&sport);
+
+    eth->hso->get_sock_source_port(eth->hso,0,&sport);
+    ESP_LOGI(TAG,"PORT:%u",sport);
 
     vTaskDelay(pdMS_TO_TICKS(3000));
 
@@ -194,36 +203,34 @@ void app_main(void)
     ESP_LOGI(TAG,"sock listening");
 
 
-    while(1){
-        eth->hso->get_sock_state(eth->hso,0,&socksta);
-        switch (socksta)
-        {
-        case HWSS_HSO_SOCK_TCP_LISTEN:
-            break;
+    // while(1){
+    //     eth->hso->get_sock_state(eth->hso,0,&socksta);
+    //     switch (socksta)
+    //     {
+    //     case HWSS_HSO_SOCK_TCP_LISTEN:
+    //         break;
 
-        case HWSS_HSO_SOCK_TCP_ESTAB:
-            eth->hso->write_tx_buffer(eth->hso,0,(uint8_t *)data,strlen(data));
-            eth->hso->ctrl_sock(eth->hso,0,HWSS_HSO_SOCKCTRL_SEND);
-            break;
-        default:
-            ESP_LOGW(TAG,"EXIT");
-            goto ex;
-            break;
-        }
-        ESP_LOGI(TAG,"LOOP");
-        vTaskDelay(pdMS_TO_TICKS(500));
-    }
+    //     case HWSS_HSO_SOCK_TCP_ESTAB:
+    //         eth->hso->write_tx_buffer(eth->hso,0,(uint8_t *)tcache,strlen(data));
+    //         eth->hso->ctrl_sock(eth->hso,0,HWSS_HSO_SOCKCTRL_SEND);
+    //         break;
+    //     default:
+    //         ESP_LOGW(TAG,"EXIT");
+    //         goto ex;
+    //         break;
+    //     }
+    //     ESP_LOGI(TAG,"LOOP");
+    //     vTaskDelay(pdMS_TO_TICKS(500));
+    // }
 
-ex:
 
-    ESP_LOGE(TAG,"EXIT");
-    hwss_cctl_enable_ping_block(eth->cctl,true);
+
     /////// UDP TEST /////////
     // hwss_proto_t pro=HWSS_PROTO_UDP;
-    // hwss_port_t sport=5590;
+    // hwss_eth_port_t sport=5590;
 
-    // hwss_ip_addr_t destip={10,0,0,255};
-    // hwss_port_t disport=5900;
+    // hwss_eth_ip4_addr_t destip={10,0,0,255};
+    // hwss_eth_port_t disport=5900;
 
     // hso->set_sock_proto(hso,0,&pro);
     // hso->set_sock_source_port(hso,0,&sport);
@@ -248,7 +255,7 @@ ex:
     //     vTaskDelay(pdMS_TO_TICKS(1000));
     // }
 
-    // hwss_ip_addr_t pip={192,168,0,24};
+    // hwss_eth_ip4_addr_t pip={192,168,0,24};
     // uint16_t pid=0;
     // uint16_t pseq=0;
     // hsl->set_peer_addr(hsl,pip);

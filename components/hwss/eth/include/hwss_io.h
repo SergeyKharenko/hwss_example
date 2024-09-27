@@ -9,8 +9,8 @@
 #include "driver/uart.h"
 
 #include "esp_err.h"
-#include "hwss_sku.h"
-#include "hwss_type.h"
+#include "hwss_eth_sku.h"
+#include "hwss_eth_type.h"
 
 typedef struct hwss_io_s hwss_io_t;
 
@@ -21,8 +21,11 @@ struct hwss_io_s{
     esp_err_t (*read)(hwss_io_t *io, uint32_t cmd, uint32_t addr, uint8_t *data);
     esp_err_t (*write)(hwss_io_t *io, uint32_t cmd, uint32_t addr, const uint8_t *data);
 
-    esp_err_t (*read_buf)(hwss_io_t *io, uint32_t cmd, uint32_t addr, uint8_t *data, uint32_t data_len);
-    esp_err_t (*write_buf)(hwss_io_t *io, uint32_t cmd, uint32_t addr, const uint8_t *data, uint32_t data_len);
+    esp_err_t (*read_buf)(hwss_io_t *io, uint32_t cmd, uint32_t addr, uint8_t *data, size_t data_len);
+    esp_err_t (*write_buf)(hwss_io_t *io, uint32_t cmd, uint32_t addr, const uint8_t *data, size_t data_len);
+
+    esp_err_t (*read_mem)(hwss_io_t *io, uint32_t cmd, uint32_t addr, uint8_t *data, size_t data_len);
+    esp_err_t (*write_mem)(hwss_io_t *io, uint32_t cmd, uint32_t addr, const uint8_t *data, size_t data_len);
 };
 
 typedef struct{
@@ -66,12 +69,20 @@ static inline esp_err_t hwss_io_write(hwss_io_t *io, uint32_t cmd, uint32_t addr
     return io->write(io,cmd,addr,data);
 }
 
-static inline esp_err_t hwss_io_read_buf(hwss_io_t *io, uint32_t cmd, uint32_t addr, uint8_t *data, uint32_t data_len){
+static inline esp_err_t hwss_io_read_buf(hwss_io_t *io, uint32_t cmd, uint32_t addr, uint8_t *data, size_t data_len){
     return io->read_buf(io,cmd,addr,data,data_len);
 }
 
-static inline esp_err_t hwss_io_write_buf(hwss_io_t *io, uint32_t cmd, uint32_t addr, const uint8_t *data, uint32_t data_len){
+static inline esp_err_t hwss_io_write_buf(hwss_io_t *io, uint32_t cmd, uint32_t addr, const uint8_t *data, size_t data_len){
     return io->write_buf(io,cmd,addr,data,data_len);
 }
 
-hwss_io_t *hwss_io_new(hwss_sku_t sku, hwss_io_type_t io_type, void *io_config);
+static inline esp_err_t hwss_io_read_mem(hwss_io_t *io, uint32_t cmd, uint32_t addr, uint8_t *data, size_t data_len){
+    return io->read_mem(io,cmd,addr,data,data_len);
+}
+
+static inline esp_err_t hwss_io_write_mem(hwss_io_t *io, uint32_t cmd, uint32_t addr, const uint8_t *data, size_t data_len){
+    return io->write_mem(io,cmd,addr,data,data_len);
+}
+
+hwss_io_t *hwss_io_new(hwss_eth_sku_t sku, hwss_io_type_t io_type, void *io_config);

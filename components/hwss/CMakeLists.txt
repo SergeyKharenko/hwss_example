@@ -15,8 +15,10 @@ set(srcs "hwss_event.c"
         "eth/hwss_phy.c"
         "eth/hwss_sscm.c"
         "eth/hwss_sscm_drv.c"
+
+        "netif/hwss_netif.c"
 )
-set(inc_dirs "include" "eth/include")
+set(inc_dirs "include" "eth/include" "netif/include")
 
 list(APPEND srcs 
                 "eth/wiznet/w5500/hwss_cctl_w5500.c"
@@ -44,4 +46,4 @@ list(APPEND inc_dirs    "eth/wiznet"
 
 idf_component_register(SRCS ${srcs}
                     INCLUDE_DIRS ${inc_dirs}
-                    REQUIRES driver lwip freertos esp_event esp_timer)
+                    REQUIRES driver freertos esp_event esp_timer esp_netif)

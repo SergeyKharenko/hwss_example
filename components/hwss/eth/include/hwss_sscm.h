@@ -8,7 +8,8 @@
 
 typedef enum{
     HWSS_SSCM_POLICY_NO_INTR_POLLING=0,
-    HWSS_SSCM_POLICY_INTR_WAKEUP_POLLING=1
+    HWSS_SSCM_POLICY_INTR_WAKEUP_POLLING=1,
+    HWSS_SSCM_POLICY_HYBRID=2
 }hwss_sscm_policy_t;
 
 typedef struct{
@@ -33,7 +34,7 @@ esp_err_t hwss_sscm_deinit(hwss_sscm_t *sscm);
 esp_err_t hwss_sscm_start(hwss_sscm_t *sscm);
 esp_err_t hwss_sscm_stop(hwss_sscm_t *sscm);
 
-esp_err_t hwss_sscm_set_sock_state(hwss_sscm_t *sscm, hwss_sockid_t id, const hwss_sockact_sta_t *state);
-esp_err_t hwss_sscm_get_sock_state(hwss_sscm_t *sscm, hwss_sockid_t id, hwss_sockact_sta_t *state);
+esp_err_t hwss_sscm_set_sock_state(hwss_sscm_t *sscm, hwss_eth_sockid_t id, const hwss_sockact_sta_t *state);
+esp_err_t hwss_sscm_get_sock_state(hwss_sscm_t *sscm, hwss_eth_sockid_t id, hwss_sockact_sta_t *state);
 
 esp_err_t hwss_sscm_intr_process(hwss_sscm_t *sscm);

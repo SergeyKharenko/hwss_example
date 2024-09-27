@@ -4,4 +4,5 @@ menu "USock Configuration"
         default y
         help
             Enable HWSS
+
 endmenu

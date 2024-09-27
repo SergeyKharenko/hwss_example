@@ -108,7 +108,7 @@ static esp_err_t hwss_hnet_w5100s_stop(hwss_hnet_t *hnet){
     return esp_timer_stop(hnet_w5100s->check_state_timer);
 }
 
-static esp_err_t hwss_hnet_w5100s_set_gateway_addr(hwss_hnet_t *hnet, const hwss_ip_addr_t addr){
+static esp_err_t hwss_hnet_w5100s_set_gateway_addr(hwss_hnet_t *hnet, const hwss_eth_ip4_addr_t addr){
     esp_err_t ret=ESP_OK;
     ESP_GOTO_ON_ERROR(W5100S_setNETLOCK(hnet->io,false),err,TAG,"cannot unlock NET");
     ESP_GOTO_ON_ERROR(W5100S_setGAR(hnet->io, addr),err,TAG,"cannot write GAR");
@@ -117,14 +117,14 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5100s_get_gateway_addr(hwss_hnet_t *hnet, hwss_ip_addr_t addr){
+static esp_err_t hwss_hnet_w5100s_get_gateway_addr(hwss_hnet_t *hnet, hwss_eth_ip4_addr_t addr){
     esp_err_t ret=ESP_OK;
     ESP_GOTO_ON_ERROR(W5100S_getGAR(hnet->io, addr),err,TAG,"cannot read GAR");
 err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5100s_set_subnet_mask(hwss_hnet_t *hnet, const hwss_ip_addr_t mask){
+static esp_err_t hwss_hnet_w5100s_set_subnet_mask(hwss_hnet_t *hnet, const hwss_eth_ip4_addr_t mask){
     esp_err_t ret=ESP_OK;
     ESP_GOTO_ON_ERROR(W5100S_setNETLOCK(hnet->io,false),err,TAG,"cannot unlock NET");
     ESP_GOTO_ON_ERROR(W5100S_setSUBR(hnet->io, mask),err,TAG,"cannot write SUBR");
@@ -133,14 +133,14 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5100s_get_subnet_mask(hwss_hnet_t *hnet, hwss_ip_addr_t mask){
+static esp_err_t hwss_hnet_w5100s_get_subnet_mask(hwss_hnet_t *hnet, hwss_eth_ip4_addr_t mask){
     esp_err_t ret=ESP_OK;
     ESP_GOTO_ON_ERROR(W5100S_getSUBR(hnet->io, mask),err,TAG,"cannot read SUBR");
 err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5100s_set_source_addr(hwss_hnet_t *hnet, const hwss_ip_addr_t addr){
+static esp_err_t hwss_hnet_w5100s_set_source_addr(hwss_hnet_t *hnet, const hwss_eth_ip4_addr_t addr){
     esp_err_t ret=ESP_OK;
     ESP_GOTO_ON_ERROR(W5100S_setNETLOCK(hnet->io,false),err,TAG,"cannot unlock NET");
     ESP_GOTO_ON_ERROR(W5100S_setSIPR(hnet->io, addr),err,TAG,"cannot write SIPR");
@@ -149,7 +149,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5100s_get_source_addr(hwss_hnet_t *hnet, hwss_ip_addr_t addr){
+static esp_err_t hwss_hnet_w5100s_get_source_addr(hwss_hnet_t *hnet, hwss_eth_ip4_addr_t addr){
     esp_err_t ret=ESP_OK;
     ESP_GOTO_ON_ERROR(W5100S_getSIPR(hnet->io, addr),err,TAG,"cannot read SIPR");
 err:
@@ -195,7 +195,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5100s_get_unreachable_addr(hwss_hnet_t *hnet, hwss_ip_addr_t addr){
+static esp_err_t hwss_hnet_w5100s_get_unreachable_addr(hwss_hnet_t *hnet, hwss_eth_ip4_addr_t addr){
     esp_err_t ret=ESP_OK;
 
     ESP_GOTO_ON_ERROR(W5100S_getUIPR(hnet->io, addr),err,TAG,"cannot read UIPR");
@@ -203,7 +203,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5100s_get_unreachable_port(hwss_hnet_t *hnet, hwss_port_t *port){
+static esp_err_t hwss_hnet_w5100s_get_unreachable_port(hwss_hnet_t *hnet, hwss_eth_port_t *port){
     esp_err_t ret=ESP_OK;
 
     ESP_GOTO_ON_ERROR(W5100S_getUPORTR(hnet->io, port),err,TAG,"cannot read UPORTR");
@@ -249,14 +249,14 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5100s_set_ppp_dest_mac_addr(hwss_hnet_t *hnet, const hwss_mac_addr_t mac_addr){
+static esp_err_t hwss_hnet_w5100s_set_ppp_dest_mac_addr(hwss_hnet_t *hnet, const hwss_eth_mac_addr_t mac_addr){
     esp_err_t ret=ESP_OK;
     ESP_GOTO_ON_ERROR(W5100S_setPHAR(hnet->io,mac_addr),err,TAG,"cannot write PHAR");
 err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5100s_get_ppp_dest_mac_addr(hwss_hnet_t *hnet, hwss_mac_addr_t mac_addr){
+static esp_err_t hwss_hnet_w5100s_get_ppp_dest_mac_addr(hwss_hnet_t *hnet, hwss_eth_mac_addr_t mac_addr){
     esp_err_t ret=ESP_OK;
     ESP_GOTO_ON_ERROR(W5100S_getPHAR(hnet->io,mac_addr),err,TAG,"cannot read PHAR");
 err:

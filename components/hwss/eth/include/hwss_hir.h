@@ -1,7 +1,7 @@
 #pragma once
 #include "esp_event.h"
 #include "driver/gpio.h"
-#include "hwss_type.h"
+#include "hwss_eth_type.h"
 
 typedef struct{
     gpio_num_t      io_num;

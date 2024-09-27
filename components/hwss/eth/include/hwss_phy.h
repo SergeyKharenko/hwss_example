@@ -1,7 +1,7 @@
 #pragma once
 #include "esp_err.h"
-#include "hwss_sku.h"
-#include "hwss_type.h"
+#include "hwss_eth_sku.h"
+#include "hwss_eth_type.h"
 #include "hwss_event.h"
 #include "hwss_io.h"
 
@@ -77,4 +77,4 @@ static inline esp_err_t hwss_phy_get_duplex(hwss_phy_t *phy, hwss_duplex_t *dupl
     return phy->get_duplex(phy,duplex);
 }
 
-hwss_phy_t *hwss_phy_new(hwss_sku_t sku, esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_phy_config_t *phy_config);
+hwss_phy_t *hwss_phy_new(hwss_eth_sku_t sku, esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_phy_config_t *phy_config);

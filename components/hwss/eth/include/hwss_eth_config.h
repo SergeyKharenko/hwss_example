@@ -1,6 +1,6 @@
 #pragma once
 #include <string.h>
-#include "hwss_sku.h"
+#include "hwss_eth_sku.h"
 #include "hwss_opt.h"
 #include "hwss_io.h"
 #include "hwss_hir.h"
@@ -17,7 +17,7 @@
 #include "hwss_sscm.h"
 
 typedef struct{
-    hwss_sku_t          sku;
+    hwss_eth_sku_t          sku;
 
     uint8_t             en_socknum;
 
@@ -47,8 +47,8 @@ typedef struct{
 
 static inline hwss_eth_config_t HWSS_ETH_W5500_DEFAULT_CONFIG(hwss_io_type_t type, void *io_config, gpio_num_t ir, gpio_num_t rst){
     hwss_eth_config_t res={
-        .sku=HWSS_SKU_W5500,
-        .en_socknum=8,
+        .sku=HWSS_ETH_SKU_W5500,
+        .en_socknum=1,
         .io_type=type,
         .io_config=io_config, 
         .elp_args={             
@@ -87,28 +87,28 @@ static inline hwss_eth_config_t HWSS_ETH_W5500_DEFAULT_CONFIG(hwss_io_type_t typ
             .retry_time_ms=200
         },                      
         .hso={                       
-            .tx_buffsize_kb[0]=2,
-            .tx_buffsize_kb[1]=2,
-            .tx_buffsize_kb[2]=2,
-            .tx_buffsize_kb[3]=2,
-            .tx_buffsize_kb[4]=2,
-            .tx_buffsize_kb[5]=2,
-            .tx_buffsize_kb[6]=2,
-            .tx_buffsize_kb[7]=2,
-            .rx_buffsize_kb[0]=2,
-            .rx_buffsize_kb[1]=2,
-            .rx_buffsize_kb[2]=2,
-            .rx_buffsize_kb[3]=2,
-            .rx_buffsize_kb[4]=2,
-            .rx_buffsize_kb[5]=2,
-            .rx_buffsize_kb[6]=2,
-            .rx_buffsize_kb[7]=2,
-            .en_socknum=8,
+            .tx_buffsize_kb[0]=16,
+            .tx_buffsize_kb[1]=0,
+            .tx_buffsize_kb[2]=0,
+            .tx_buffsize_kb[3]=0,
+            .tx_buffsize_kb[4]=0,
+            .tx_buffsize_kb[5]=0,
+            .tx_buffsize_kb[6]=0,
+            .tx_buffsize_kb[7]=0,
+            .rx_buffsize_kb[0]=16,
+            .rx_buffsize_kb[1]=0,
+            .rx_buffsize_kb[2]=0,
+            .rx_buffsize_kb[3]=0,
+            .rx_buffsize_kb[4]=0,
+            .rx_buffsize_kb[5]=0,
+            .rx_buffsize_kb[6]=0,
+            .rx_buffsize_kb[7]=0,
+            .en_socknum=1,
         },
         .sscm={
             .sock_active_threshold_ms=1000,
             .sock_polling_period_ms=5,
-            .en_socknum=8,
+            .en_socknum=1,
             .policy=HWSS_SSCM_POLICY_INTR_WAKEUP_POLLING,
         },
         .has_hppe=true,
@@ -128,12 +128,16 @@ static inline hwss_eth_config_t HWSS_ETH_W5500_DEFAULT_CONFIG(hwss_io_type_t typ
 }
 
 
-static inline void hwss_eth_config_set_mac_addr(hwss_eth_config_t *config, hwss_mac_addr_t addr){
-    memcpy(config->mac.addr,addr,HWSS_MAC_ADDR_LEN);
+static inline void hwss_eth_config_set_mac_addr(hwss_eth_config_t *config, hwss_eth_mac_addr_t addr){
+    memcpy(config->mac.addr,addr,HWSS_ETH_MAC_ADDR_LEN);
 }
 
 static inline void hwss_eth_config_set_tx_rx_buffsize_kb(hwss_eth_config_t *config, uint8_t en_socknum,
             const uint8_t *tx_buffsize_kb, const uint8_t *rx_buffsize_kb){
     memcpy(config->hso.tx_buffsize_kb,tx_buffsize_kb,en_socknum);
     memcpy(config->hso.rx_buffsize_kb,rx_buffsize_kb,en_socknum);
+
+    config->en_socknum=en_socknum;
+    config->hso.en_socknum=en_socknum;
+    config->sscm.en_socknum=en_socknum;
 }

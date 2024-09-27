@@ -113,15 +113,15 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hsl_w5100s_set_peer_addr(hwss_hsl_t *hsl, const hwss_ip_addr_t addr){
+static esp_err_t hwss_hsl_w5100s_set_peer_addr(hwss_hsl_t *hsl, const hwss_eth_ip4_addr_t addr){
     return W5100S_setSLPIPR(hsl->io,addr);
 }
 
-static esp_err_t hwss_hsl_w5100s_get_peer_addr(hwss_hsl_t *hsl, hwss_ip_addr_t addr){
+static esp_err_t hwss_hsl_w5100s_get_peer_addr(hwss_hsl_t *hsl, hwss_eth_ip4_addr_t addr){
     return W5100S_getSLPIPR(hsl->io,addr);
 }
 
-static esp_err_t hwss_hsl_w5100s_get_peer_mac_addr(hwss_hsl_t *hsl, hwss_mac_addr_t addr){
+static esp_err_t hwss_hsl_w5100s_get_peer_mac_addr(hwss_hsl_t *hsl, hwss_eth_mac_addr_t addr){
     return W5100S_getSLPHAR(hsl->io,addr);
 }
 

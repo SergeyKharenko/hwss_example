@@ -61,7 +61,7 @@ static esp_err_t hwss_hso_w5500_init(hwss_hso_t *hso){
     esp_err_t ret=ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
-    for(hwss_sockid_t id=0;id<hso_w5500->en_socknum;id++){
+    for(hwss_eth_sockid_t id=0;id<hso_w5500->en_socknum;id++){
         ESP_GOTO_ON_ERROR(W5500_setSn_MR(hso_w5500->io,id,&w5500_sock_mode_default),err,TAG,"cannot write Sn_MR");
         ESP_GOTO_ON_ERROR(W5500_setSn_PORT(hso_w5500->io,id,&w5500_sock_port_defualt),err,TAG,"cannot write Sn_PORT");
         ESP_GOTO_ON_ERROR(W5500_setSn_DHAR(hso_w5500->io,id,w5500_sock_dest_mac_addr_default),err,TAG,"cannot write Sn_DHAR");
@@ -82,7 +82,7 @@ static esp_err_t hwss_hso_w5500_deinit(hwss_hso_t *hso){
     return ESP_OK;
 }
 
-static esp_err_t hwss_hso_w5500_ctrl_sock(hwss_hso_t *hso, hwss_sockid_t id, hwss_hso_sockctrl_t ctrl){
+static esp_err_t hwss_hso_w5500_ctrl_sock(hwss_hso_t *hso, hwss_eth_sockid_t id, hwss_hso_sockctrl_t ctrl){
     esp_err_t ret=ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
     uint8_t sncr=0;
@@ -116,7 +116,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_write_tx_buffer(hwss_hso_t *hso, hwss_sockid_t id, const uint8_t *data, uint16_t len){
+static esp_err_t hwss_hso_w5500_write_tx_buffer(hwss_hso_t *hso, hwss_eth_sockid_t id, const uint8_t *data, uint16_t len){
     esp_err_t ret=ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
@@ -125,16 +125,18 @@ static esp_err_t hwss_hso_w5500_write_tx_buffer(hwss_hso_t *hso, hwss_sockid_t i
 
     uint16_t txwr=0;
     ESP_GOTO_ON_ERROR(W5500_getSn_TX_WR(hso_w5500->io,id,&txwr),err,TAG,"cannot read Sn_TX_WR");
-    ESP_GOTO_ON_ERROR(W5500_writeSn_TXBUF(hso_w5500->io,id,txwr,data,len),err,TAG,"cannot write Sn_TXBUF");
 
+    txwr=hwss_eth_ntohs(txwr);
+    ESP_GOTO_ON_ERROR(W5500_writeSn_TXBUF(hso_w5500->io,id,txwr,data,len),err,TAG,"cannot write Sn_TXBUF");
     txwr+=len;
+    txwr=hwss_eth_htons(txwr);
     ESP_GOTO_ON_ERROR(W5500_setSn_TX_WR(hso_w5500->io,id,&txwr),err,TAG,"cannot update Sn_TX_WR");
 
 err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_read_rx_buffer(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *data, uint16_t len){
+static esp_err_t hwss_hso_w5500_read_rx_buffer(hwss_hso_t *hso, hwss_eth_sockid_t id, uint8_t *data, uint16_t len){
     esp_err_t ret=ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
@@ -143,49 +145,48 @@ static esp_err_t hwss_hso_w5500_read_rx_buffer(hwss_hso_t *hso, hwss_sockid_t id
     
     uint16_t rxrd=0;
     ESP_GOTO_ON_ERROR(W5500_getSn_RX_RD(hso_w5500->io,id,&rxrd),err,TAG,"cannot read Sn_RX_RD");
+    rxrd=hwss_eth_ntohs(rxrd);
+
     ESP_GOTO_ON_ERROR(W5500_readSn_RXBUF(hso_w5500->io,id,rxrd,data,len),err,TAG,"cannot read Sn_RXBUF");
-
     rxrd+=len;
+    rxrd=hwss_eth_htons(rxrd);
     ESP_GOTO_ON_ERROR(W5500_setSn_RX_RD(hso_w5500->io,id,&rxrd),err,TAG,"cannot update Sn_RX_RD");
 err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_drop_rx_buffer(hwss_hso_t *hso, hwss_sockid_t id, uint16_t len){
+static esp_err_t hwss_hso_w5500_drop_rx_buffer(hwss_hso_t *hso, hwss_eth_sockid_t id){
     esp_err_t ret=ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
-
-    if(len==0)
-        return ret;
     
     uint16_t rxrd=0;
-    ESP_GOTO_ON_ERROR(W5500_getSn_RX_RD(hso_w5500->io,id,&rxrd),err,TAG,"cannot read Sn_RX_RD");
-
-    rxrd+=len;
+    ESP_GOTO_ON_ERROR(W5500_getSn_RX_WR(hso_w5500->io,id,&rxrd),err,TAG,"cannot read Sn_RX_WR");
     ESP_GOTO_ON_ERROR(W5500_setSn_RX_RD(hso_w5500->io,id,&rxrd),err,TAG,"cannot update Sn_RX_RD");
 err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_get_tx_free_length(hwss_hso_t *hso, hwss_sockid_t id, uint16_t *len){
+static esp_err_t hwss_hso_w5500_get_tx_free_length(hwss_hso_t *hso, hwss_eth_sockid_t id, uint16_t *len){
     esp_err_t ret=ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
     ESP_GOTO_ON_ERROR(W5500_getSn_TX_FSR(hso_w5500->io,id,len),err,TAG,"cannot read Sn_TX_FSR");
+    *len=hwss_eth_ntohs(*len);
 err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_get_rx_length(hwss_hso_t *hso, hwss_sockid_t id, uint16_t *len){
+static esp_err_t hwss_hso_w5500_get_rx_length(hwss_hso_t *hso, hwss_eth_sockid_t id, uint16_t *len){
     esp_err_t ret=ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
     ESP_GOTO_ON_ERROR(W5500_getSn_RX_RSR(hso_w5500->io,id,len),err,TAG,"cannot read Sn_RX_RSR");
+    *len=hwss_eth_ntohs(*len);
 err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_set_sock_proto(hwss_hso_t *hso, hwss_sockid_t id, const hwss_proto_t *proto){
+static esp_err_t hwss_hso_w5500_set_sock_proto(hwss_hso_t *hso, hwss_eth_sockid_t id, const hwss_proto_t *proto){
     esp_err_t ret=ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
     sn_mr_reg_t snmr;
@@ -206,7 +207,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_get_sock_proto(hwss_hso_t *hso, hwss_sockid_t id, hwss_proto_t *proto){
+static esp_err_t hwss_hso_w5500_get_sock_proto(hwss_hso_t *hso, hwss_eth_sockid_t id, hwss_proto_t *proto){
     esp_err_t ret=ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
     sn_mr_reg_t snmr;
@@ -226,7 +227,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_set_sockmode_opt(hwss_hso_t *hso, hwss_sockid_t id, const void *opt){
+static esp_err_t hwss_hso_w5500_set_sockmode_opt(hwss_hso_t *hso, hwss_eth_sockid_t id, const void *opt){
     esp_err_t ret= ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
     sn_mr_reg_t snmr;
@@ -260,7 +261,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_get_sockmode_opt(hwss_hso_t *hso, hwss_sockid_t id, void *opt){
+static esp_err_t hwss_hso_w5500_get_sockmode_opt(hwss_hso_t *hso, hwss_eth_sockid_t id, void *opt){
     esp_err_t ret= ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
     sn_mr_reg_t snmr;
@@ -296,43 +297,47 @@ err:
     return ret;    
 }
 
-static esp_err_t hwss_hso_w5500_set_sock_source_port(hwss_hso_t *hso, hwss_sockid_t id, const hwss_port_t *port){
+static esp_err_t hwss_hso_w5500_set_sock_source_port(hwss_hso_t *hso, hwss_eth_sockid_t id, const hwss_eth_port_t *port){
     esp_err_t ret= ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
-    ESP_GOTO_ON_ERROR(W5500_setSn_PORT(hso_w5500->io,id,port),err,TAG,"cannot write Sn_PORT");
+    uint16_t nport=hwss_eth_htons(*port);
+    ESP_GOTO_ON_ERROR(W5500_setSn_PORT(hso_w5500->io,id,&nport),err,TAG,"cannot write Sn_PORT");
 err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_get_sock_source_port(hwss_hso_t *hso, hwss_sockid_t id, hwss_port_t *port){
+static esp_err_t hwss_hso_w5500_get_sock_source_port(hwss_hso_t *hso, hwss_eth_sockid_t id, hwss_eth_port_t *port){
     esp_err_t ret= ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
     ESP_GOTO_ON_ERROR(W5500_getSn_PORT(hso_w5500->io,id,port),err,TAG,"cannot read Sn_PORT");
+    *port=hwss_eth_ntohs(*port);
 err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_set_sock_dest_port(hwss_hso_t *hso, hwss_sockid_t id, const hwss_port_t *port){
+static esp_err_t hwss_hso_w5500_set_sock_dest_port(hwss_hso_t *hso, hwss_eth_sockid_t id, const hwss_eth_port_t *port){
     esp_err_t ret= ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
-    ESP_GOTO_ON_ERROR(W5500_setSn_DPORT(hso_w5500->io,id,port),err,TAG,"cannot write Sn_DPORT");
+    uint16_t nport=hwss_eth_htons(*port);
+    ESP_GOTO_ON_ERROR(W5500_setSn_DPORT(hso_w5500->io,id,&nport),err,TAG,"cannot write Sn_DPORT");
 err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_get_sock_dest_port(hwss_hso_t *hso, hwss_sockid_t id, hwss_port_t *port){
+static esp_err_t hwss_hso_w5500_get_sock_dest_port(hwss_hso_t *hso, hwss_eth_sockid_t id, hwss_eth_port_t *port){
     esp_err_t ret= ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
     ESP_GOTO_ON_ERROR(W5500_getSn_DPORT(hso_w5500->io,id,port),err,TAG,"cannot read Sn_DPORT");
+    *port=hwss_eth_ntohs(*port);
 err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_set_sock_dest_mac_addr(hwss_hso_t *hso, hwss_sockid_t id, const hwss_mac_addr_t addr){
+static esp_err_t hwss_hso_w5500_set_sock_dest_mac_addr(hwss_hso_t *hso, hwss_eth_sockid_t id, const hwss_eth_mac_addr_t addr){
     esp_err_t ret= ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
@@ -341,7 +346,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_get_sock_dest_mac_addr(hwss_hso_t *hso, hwss_sockid_t id, hwss_mac_addr_t addr){
+static esp_err_t hwss_hso_w5500_get_sock_dest_mac_addr(hwss_hso_t *hso, hwss_eth_sockid_t id, hwss_eth_mac_addr_t addr){
     esp_err_t ret= ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
@@ -350,7 +355,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_set_sock_dest_addr(hwss_hso_t *hso, hwss_sockid_t id, const uint8_t *addr){
+static esp_err_t hwss_hso_w5500_set_sock_dest_addr(hwss_hso_t *hso, hwss_eth_sockid_t id, const uint8_t *addr){
     esp_err_t ret= ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
@@ -359,7 +364,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_get_sock_dest_addr(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *addr){
+static esp_err_t hwss_hso_w5500_get_sock_dest_addr(hwss_hso_t *hso, hwss_eth_sockid_t id, uint8_t *addr){
     esp_err_t ret= ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
@@ -368,7 +373,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_set_sock_keepalive_tick(hwss_hso_t *hso, hwss_sockid_t id, const uint8_t *tick){
+static esp_err_t hwss_hso_w5500_set_sock_keepalive_tick(hwss_hso_t *hso, hwss_eth_sockid_t id, const uint8_t *tick){
     esp_err_t ret= ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
@@ -377,7 +382,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_get_sock_keepalive_tick(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *tick){
+static esp_err_t hwss_hso_w5500_get_sock_keepalive_tick(hwss_hso_t *hso, hwss_eth_sockid_t id, uint8_t *tick){
     esp_err_t ret= ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
@@ -386,7 +391,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_get_sock_state(hwss_hso_t *hso, hwss_sockid_t id, hwss_hso_socksta_t *sta){
+static esp_err_t hwss_hso_w5500_get_sock_state(hwss_hso_t *hso, hwss_eth_sockid_t id, hwss_hso_socksta_t *sta){
     esp_err_t ret=ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
     uint8_t snsr;
@@ -411,7 +416,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hso_w5500_get_sock_state_raw(hwss_hso_t *hso, hwss_sockid_t id, uint8_t *sta){
+static esp_err_t hwss_hso_w5500_get_sock_state_raw(hwss_hso_t *hso, hwss_eth_sockid_t id, uint8_t *sta){
     esp_err_t ret=ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
 
@@ -426,11 +431,10 @@ hwss_hso_t *hwss_hso_new_w5500(esp_event_loop_handle_t elp, hwss_io_t *io, hwss_
 
     ESP_GOTO_ON_FALSE(io,NULL,err,TAG,"cannot set io to null");
     ESP_GOTO_ON_FALSE(config,NULL,err,TAG,"cannot set config to null");
-    ESP_GOTO_ON_FALSE(config->en_socknum>1,NULL,err,TAG,"at least 2 sockets should be enabled");
     ESP_GOTO_ON_FALSE(config->en_socknum<=W5500_SOCKNUM,NULL,err,TAG,"max socket of W5500 is 8");
 
     uint16_t tx_cache_size_kb=0, rx_cache_size_kb=0;
-    for(hwss_sockid_t id=0;id<config->en_socknum;id++){
+    for(hwss_eth_sockid_t id=0;id<config->en_socknum;id++){
         tx_cache_size_kb+=config->tx_buffsize_kb[id];
         rx_cache_size_kb+=config->rx_buffsize_kb[id];
     }

@@ -1,0 +1,17 @@
+menu "HWSS Configuration"
+    choice HWSS_MODE
+        prompt "HWSS Mode"
+        default HWSS_MODE_COMPATIBLE
+        help
+            Select HWSS Function Mode
+
+        config HWSS_MODE_COMPATIBLE
+            bool "Compatible Mode"
+            help Fully compatible with esp_netif apis.
+        
+        config HWSS_MODE_INDEPENDENT
+            bool "Independent Mode"
+            help Only support HWSS apis.
+    endchoice
+
+endmenu

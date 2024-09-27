@@ -39,8 +39,10 @@ static esp_err_t hwss_hppe_w5500_set_link_cp_request_time(hwss_hppe_t *hppe, con
     ESP_GOTO_ON_FALSE(CP_REQ_MS2TICK(*ms)<=0xFF,ESP_ERR_INVALID_ARG,err,TAG,"control protocol request time too long");
 
     uint8_t tick=(uint8_t) CP_REQ_MS2TICK(*ms);
-    ESP_GOTO_ON_ERROR(W5500_setPTIMER(hppe_w5500->io,&tick),err,TAG,"cannot write PTIMER");
     hppe_w5500->cp_request_tick=tick;
+
+    tick=hwss_eth_htons(tick);
+    ESP_GOTO_ON_ERROR(W5500_setPTIMER(hppe_w5500->io,&tick),err,TAG,"cannot write PTIMER");
 
 err:
     return ret;
@@ -52,7 +54,7 @@ static esp_err_t hwss_hppe_w5500_get_link_cp_request_time(hwss_hppe_t *hppe, uin
     uint8_t tick=0;
 
     ESP_GOTO_ON_ERROR(W5500_getPTIMER(hppe_w5500->io,&tick),err,TAG,"cannot read PTIMER");
-    *ms=(uint16_t) CP_REQ_TICK2MS(tick);
+    *ms=(uint16_t) CP_REQ_TICK2MS(hwss_eth_ntohs(tick));
 err:
     return ret;
 }
@@ -61,8 +63,8 @@ static esp_err_t hwss_hppe_w5500_set_link_cp_magic_num(hwss_hppe_t *hppe, const 
     esp_err_t ret=ESP_OK;
     hwss_hppe_w5500_t *hppe_w5500=__containerof(hppe,hwss_hppe_w5500_t,super);
 
-    ESP_GOTO_ON_ERROR(W5500_setPMAGIC(hppe_w5500->io,num),err,TAG,"cannot write PMAGIC");
     hppe_w5500->cp_magic_num=*num;
+    ESP_GOTO_ON_ERROR(W5500_setPMAGIC(hppe_w5500->io,num),err,TAG,"cannot write PMAGIC");
 err:
     return ret;
 }
@@ -76,7 +78,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hppe_w5500_set_dest_mac_addr(hwss_hppe_t *hppe, const hwss_mac_addr_t mac_addr){
+static esp_err_t hwss_hppe_w5500_set_dest_mac_addr(hwss_hppe_t *hppe, const hwss_eth_mac_addr_t mac_addr){
     esp_err_t ret=ESP_OK;
     hwss_hppe_w5500_t *hppe_w5500=__containerof(hppe,hwss_hppe_w5500_t,super);
 
@@ -85,7 +87,7 @@ err:
     return ret;    
 }
 
-static esp_err_t hwss_hppe_w5500_get_dest_mac_addr(hwss_hppe_t *hppe, hwss_mac_addr_t mac_addr){
+static esp_err_t hwss_hppe_w5500_get_dest_mac_addr(hwss_hppe_t *hppe, hwss_eth_mac_addr_t mac_addr){
     esp_err_t ret=ESP_OK;
     hwss_hppe_w5500_t *hppe_w5500=__containerof(hppe,hwss_hppe_w5500_t,super);
 
@@ -98,7 +100,8 @@ static esp_err_t hwss_hppe_w5500_set_sess_id(hwss_hppe_t *hppe, const uint16_t *
     esp_err_t ret=ESP_OK;
     hwss_hppe_w5500_t *hppe_w5500=__containerof(hppe,hwss_hppe_w5500_t,super);
 
-    ESP_GOTO_ON_ERROR(W5500_setPSID(hppe_w5500->io,id),err,TAG,"cannot write PSID");
+    uint16_t nid=hwss_eth_htons(*id);
+    ESP_GOTO_ON_ERROR(W5500_setPSID(hppe_w5500->io,&nid),err,TAG,"cannot write PSID");
 err:
     return ret;
 }
@@ -108,6 +111,7 @@ static esp_err_t hwss_hppe_w5500_get_sess_id(hwss_hppe_t *hppe, uint16_t *id){
     hwss_hppe_w5500_t *hppe_w5500=__containerof(hppe,hwss_hppe_w5500_t,super);
 
     ESP_GOTO_ON_ERROR(W5500_getPSID(hppe_w5500->io,id),err,TAG,"cannot read PSID");
+    *id=hwss_eth_ntohs(*id);
 err:
     return ret;    
 }
@@ -116,7 +120,8 @@ static esp_err_t hwss_hppe_w5500_set_max_recv_unit(hwss_hppe_t *hppe, const uint
     esp_err_t ret=ESP_OK;
     hwss_hppe_w5500_t *hppe_w5500=__containerof(hppe,hwss_hppe_w5500_t,super);
 
-    ESP_GOTO_ON_ERROR(W5500_setPMRU(hppe_w5500->io,unit),err,TAG,"cannot write PMRU");
+    uint16_t nunit=hwss_eth_htons(*unit);
+    ESP_GOTO_ON_ERROR(W5500_setPMRU(hppe_w5500->io,&nunit),err,TAG,"cannot write PMRU");
 err:
     return ret;
 }
@@ -126,6 +131,7 @@ static esp_err_t hwss_hppe_w5500_get_max_recv_unit(hwss_hppe_t *hppe, uint16_t *
     hwss_hppe_w5500_t *hppe_w5500=__containerof(hppe,hwss_hppe_w5500_t,super);
 
     ESP_GOTO_ON_ERROR(W5500_getPMRU(hppe_w5500->io,unit),err,TAG,"cannot read PMRU");
+    *unit=hwss_eth_ntohs(*unit);
 err:
     return ret;    
 }

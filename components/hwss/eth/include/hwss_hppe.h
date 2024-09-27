@@ -1,5 +1,5 @@
 #pragma once
-#include "hwss_sku.h"
+#include "hwss_eth_sku.h"
 #include "hwss_io.h"
 
 typedef struct{
@@ -19,8 +19,8 @@ struct hwss_hppe_s{
     esp_err_t (*set_link_cp_magic_num)(hwss_hppe_t *hppe, const uint8_t *num);
     esp_err_t (*get_link_cp_magic_num)(hwss_hppe_t *hppe, uint8_t *num);
 
-    esp_err_t (*set_dest_mac_addr)(hwss_hppe_t *hppe, const hwss_mac_addr_t mac_addr);
-    esp_err_t (*get_dest_mac_addr)(hwss_hppe_t *hppe, hwss_mac_addr_t mac_addr);
+    esp_err_t (*set_dest_mac_addr)(hwss_hppe_t *hppe, const hwss_eth_mac_addr_t mac_addr);
+    esp_err_t (*get_dest_mac_addr)(hwss_hppe_t *hppe, hwss_eth_mac_addr_t mac_addr);
 
     esp_err_t (*set_sess_id)(hwss_hppe_t *hppe, const uint16_t *id);
     esp_err_t (*get_sess_id)(hwss_hppe_t *hppe, uint16_t *id);
@@ -53,11 +53,11 @@ static inline esp_err_t hwss_hppe_get_link_cp_magic_num(hwss_hppe_t *hppe, uint8
     return hppe->get_link_cp_magic_num(hppe,num);
 }
 
-static inline esp_err_t hwss_hppe_set_dest_mac_addr(hwss_hppe_t *hppe, const hwss_mac_addr_t mac_addr){
+static inline esp_err_t hwss_hppe_set_dest_mac_addr(hwss_hppe_t *hppe, const hwss_eth_mac_addr_t mac_addr){
     return hppe->set_dest_mac_addr(hppe,mac_addr);
 }
 
-static inline esp_err_t hwss_hppe_get_dest_mac_addr(hwss_hppe_t *hppe, hwss_mac_addr_t mac_addr){
+static inline esp_err_t hwss_hppe_get_dest_mac_addr(hwss_hppe_t *hppe, hwss_eth_mac_addr_t mac_addr){
     return hppe->get_dest_mac_addr(hppe,mac_addr);
 }
 
@@ -77,4 +77,4 @@ static inline esp_err_t hwss_hppe_get_max_recv_unit(hwss_hppe_t *hppe, uint16_t 
     return hppe->get_max_recv_unit(hppe,unit);
 }
 
-hwss_hppe_t *hwss_hppe_new(hwss_sku_t sku, hwss_io_t *io, const hwss_hppe_config_t *config);
+hwss_hppe_t *hwss_hppe_new(hwss_eth_sku_t sku, hwss_io_t *io, const hwss_hppe_config_t *config);

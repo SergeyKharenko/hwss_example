@@ -32,7 +32,7 @@ static esp_err_t hwss_hnet_w5500_deinit(hwss_hnet_t *hnet){
     return ESP_OK;
 }
 
-static esp_err_t hwss_hnet_w5500_set_gateway_addr(hwss_hnet_t *hnet, const hwss_ip_addr_t addr){
+static esp_err_t hwss_hnet_w5500_set_gateway_addr(hwss_hnet_t *hnet, const hwss_eth_ip4_addr_t addr){
     esp_err_t ret=ESP_OK;
     hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
     ESP_GOTO_ON_ERROR(W5500_setGAR(hnet_w5500->io, addr),err,TAG,"cannot write GAR");
@@ -40,7 +40,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5500_get_gateway_addr(hwss_hnet_t *hnet, hwss_ip_addr_t addr){
+static esp_err_t hwss_hnet_w5500_get_gateway_addr(hwss_hnet_t *hnet, hwss_eth_ip4_addr_t addr){
     esp_err_t ret=ESP_OK;
     hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
     ESP_GOTO_ON_ERROR(W5500_getGAR(hnet_w5500->io, addr),err,TAG,"cannot read GAR");
@@ -48,7 +48,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5500_set_subnet_mask(hwss_hnet_t *hnet, const hwss_ip_addr_t mask){
+static esp_err_t hwss_hnet_w5500_set_subnet_mask(hwss_hnet_t *hnet, const hwss_eth_ip4_addr_t mask){
     esp_err_t ret=ESP_OK;
     hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
     ESP_GOTO_ON_ERROR(W5500_setSUBR(hnet_w5500->io, mask),err,TAG,"cannot write SUBR");
@@ -56,7 +56,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5500_get_subnet_mask(hwss_hnet_t *hnet, hwss_ip_addr_t mask){
+static esp_err_t hwss_hnet_w5500_get_subnet_mask(hwss_hnet_t *hnet, hwss_eth_ip4_addr_t mask){
     esp_err_t ret=ESP_OK;
     hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
     ESP_GOTO_ON_ERROR(W5500_getSUBR(hnet_w5500->io, mask),err,TAG,"cannot read SUBR");
@@ -64,7 +64,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5500_set_source_addr(hwss_hnet_t *hnet, const hwss_ip_addr_t addr){
+static esp_err_t hwss_hnet_w5500_set_source_addr(hwss_hnet_t *hnet, const hwss_eth_ip4_addr_t addr){
     esp_err_t ret=ESP_OK;
     hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
     ESP_GOTO_ON_ERROR(W5500_setSIPR(hnet_w5500->io, addr),err,TAG,"cannot write SIPR");
@@ -72,7 +72,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5500_get_source_addr(hwss_hnet_t *hnet, hwss_ip_addr_t addr){
+static esp_err_t hwss_hnet_w5500_get_source_addr(hwss_hnet_t *hnet, hwss_eth_ip4_addr_t addr){
     esp_err_t ret=ESP_OK;
     hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
     ESP_GOTO_ON_ERROR(W5500_getSIPR(hnet_w5500->io, addr),err,TAG,"cannot read SIPR");
@@ -84,9 +84,11 @@ static esp_err_t hwss_hnet_w5500_set_retry_time(hwss_hnet_t *hnet, const uint16_
     esp_err_t ret=ESP_OK;
     hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
     uint16_t tick=*ms*10;
-
-    ESP_GOTO_ON_ERROR(W5500_setRTR(hnet_w5500->io, &tick),err,TAG,"cannot write RTR");
     hnet_w5500->retry_tick=tick;
+
+    tick=hwss_eth_htons(tick);
+    ESP_GOTO_ON_ERROR(W5500_setRTR(hnet_w5500->io, &tick),err,TAG,"cannot write RTR");
+    
 err:
     return ret;
 }
@@ -95,9 +97,8 @@ static esp_err_t hwss_hnet_w5500_get_retry_time(hwss_hnet_t *hnet, uint16_t *ms)
     esp_err_t ret=ESP_OK;
     hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
     uint16_t tick=0;
-
     ESP_GOTO_ON_ERROR(W5500_getRTR(hnet_w5500->io, &tick),err,TAG,"cannot read RTR");
-    *ms=tick/10;
+    *ms=hwss_eth_ntohs(tick)/10;
 err:
     return ret;
 }
@@ -106,8 +107,8 @@ static esp_err_t hwss_hnet_w5500_set_retry_cnt(hwss_hnet_t *hnet, const uint8_t 
     esp_err_t ret=ESP_OK;
     hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
 
-    ESP_GOTO_ON_ERROR(W5500_setRCR(hnet_w5500->io, cnt),err,TAG,"cannot write RCR");
     hnet_w5500->retry_cnt=*cnt;
+    ESP_GOTO_ON_ERROR(W5500_setRCR(hnet_w5500->io, cnt),err,TAG,"cannot write RCR");
 err:
     return ret;
 }
@@ -121,7 +122,7 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5500_get_unreachable_addr(hwss_hnet_t *hnet, hwss_ip_addr_t addr){
+static esp_err_t hwss_hnet_w5500_get_unreachable_addr(hwss_hnet_t *hnet, hwss_eth_ip4_addr_t addr){
     esp_err_t ret=ESP_OK;
     hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
 
@@ -130,11 +131,12 @@ err:
     return ret;
 }
 
-static esp_err_t hwss_hnet_w5500_get_unreachable_port(hwss_hnet_t *hnet, hwss_port_t *port){
+static esp_err_t hwss_hnet_w5500_get_unreachable_port(hwss_hnet_t *hnet, hwss_eth_port_t *port){
     esp_err_t ret=ESP_OK;
     hwss_hnet_w5500_t *hnet_w5500=__containerof(hnet,hwss_hnet_w5500_t,super);
 
     ESP_GOTO_ON_ERROR(W5500_getUPORTR(hnet_w5500->io, port),err,TAG,"cannot read UPORTR");
+    *port=hwss_eth_ntohs(*port);
 err:
     return ret;
 }

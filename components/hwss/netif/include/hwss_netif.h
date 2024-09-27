@@ -1,8 +1,12 @@
 #pragma once
 #include "esp_err.h"
 #include "hwss_type.h"
+#include "hwss_eth.h"
 
 typedef struct{
+    hwss_eth_t *eth;
+    
+    
 
 }hwss_netif_config_t;
 
@@ -13,11 +17,10 @@ typedef struct{
 
 
 
-// esp_err_t hwss_netif_init(void);
-// esp_err_t hwss_netif_deinit(void);
+esp_err_t hwss_netif_init(void);
+esp_err_t hwss_netif_deinit(void);
 
-// hwss_netif_t *hwss_netif_new(hwss_netif_config_t *hwss_netif_config);
-// void hwss_netif_destroy(hwss_netif_t *hwss_netif);
+hwss_netif_t *hwss_netif_new(hwss_netif_config_t *hwss_netif_config);
 
 // esp_err_t hwss_netif_get_devid(hwss_netif_t *hwss_netif, hwss_devid_t *devid);
 

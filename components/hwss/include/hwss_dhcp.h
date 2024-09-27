@@ -7,7 +7,7 @@
 typedef struct hwss_dhcpc_s hwss_dhcpc_t;
 
 typedef struct{
-    hwss_sockid_t id;
+    hwss_eth_sockid_t id;
     
 }hwss_dhcpc_config_t;
 
@@ -18,7 +18,6 @@ struct hwss_dhcpc_s {
     esp_err_t       (*init)(hwss_dhcpc_t *dhcpc);
     esp_err_t       (*deinit)(hwss_dhcpc_t *dhcpc);
 };
-
 
 
 

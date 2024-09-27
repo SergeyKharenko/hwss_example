@@ -2,108 +2,10 @@
 // #include <stdarg.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <machine/endian.h>
-#include "esp_event_base.h"
 
-typedef enum{
-    HWSS_IO_SPI =           0x00,
-    HWSS_IO_SPI_PRO =       0x01,           // For CH395 only 
-    HWSS_IO_PARALLEL_8 =    0x02,
-    HWSS_IO_PARALLEL_16 =   0x03,
-    HWSS_IO_FAST_PARALLEL_8 =   0x04,
-    HWSS_IO_FAST_PARALLEL_16 =  0x05,
-    HWSS_IO_UART =          0x06,
+#include "hwss_ip_addr.h"
 
-    HWSS_IO_TYPE_END =      0xFF
-}hwss_io_type_t;
 
-typedef hwss_io_type_t      (hwss_io_types_t)[];
-static inline bool hwss_io_type_supported(const hwss_io_types_t list, hwss_io_type_t type){
-    uint8_t idx=0;
-    while(list[idx]!=HWSS_IO_TYPE_END){
-        if(type == *list)
-            return true;
-        idx++;
-    }
-    return false;
-}
-
-typedef enum{
-    HWSS_TRIGGER_POSEDGE,
-    HWSS_TRIGGER_NEGEDGE
-}hwss_trigger_t;
-
-typedef enum {
-    HWSS_PHY_AUTONEGO_RESTART,
-    HWSS_PHY_AUTONEGO_EN,
-    HWSS_PHY_AUTONEGO_DIS,
-    HWSS_PHY_AUTONEGO_G_STAT,
-} hwss_phy_autoneg_cmd_t;
-
-typedef enum {
-    HWSS_LINK_UP,  
-    HWSS_LINK_DOWN 
-} hwss_link_t;
-
-typedef enum {
-    HWSS_SPEED_10M, 
-    HWSS_SPEED_100M,
-    HWSS_SPEED_MAX  
-} hwss_speed_t;
-
-typedef enum {
-    HWSS_DUPLEX_HALF,
-    HWSS_DUPLEX_FULL,
-} hwss_duplex_t;
-
-typedef enum{
-    HWSS_PROTO_CLOSE =     0x00,
-    HWSS_PROTO_TCP =       0x01,
-    HWSS_PROTO_UDP =       0x02,
-    HWSS_PROTO_MACRAW =    0x03,
-    
-    HWSS_PROTO_UNKNOW =    0xFF
-} hwss_proto_t;
-
-#define HWSS_MAC_ADDR_LEN       6
-#define HWSS_IP_ADDR_LEN        4
-
-typedef uint8_t (hwss_mac_addr_t)[HWSS_MAC_ADDR_LEN];
-typedef uint8_t (hwss_ip_addr_t)[HWSS_IP_ADDR_LEN];
-
-typedef uint8_t                 hwss_devid_t;
-typedef uint8_t                 hwss_sockid_t;
-typedef uint16_t                hwss_port_t;
-
-static inline uint16_t hwss_htons(uint16_t x){
-#if BYTE_ORDER == LITTLE_ENDIAN
-    return (((x) & (uint16_t) 0x00FFul)<<8)|(((x) & (uint16_t) 0xFF00ul)>>8);
-#else
-    return x;
-#endif
-}
-
-static inline uint16_t hwss_ntohs(uint16_t x){
-#if BYTE_ORDER == LITTLE_ENDIAN
-    return (((x) & (uint16_t) 0x00FFul)<<8)|(((x) & (uint16_t) 0xFF00ul)>>8);
-#else
-    return x;
-#endif
-}
-
-typedef enum{
-    HWSS_SOCKACT_ACTIVE,
-    HWSS_SOCKACT_IDLE,
-    HWSS_SOCKACT_GENERIC
-}hwss_sockact_sta_t;
-
-#define HWSS_SOCK_INTR_SEND_OK           1<<0
-#define HWSS_SOCK_INTR_TIMEOUT           1<<1
-#define HWSS_SOCK_INTR_RECV              1<<2
-#define HWSS_SOCK_INTR_DISCONN           1<<3
-#define HWSS_SOCK_INTR_CONNECT           1<<4
-
-typedef uint16_t hwss_chipver_t;
 
 // static inline bool hwss_same_option_check(uint8_t num, bool opt,...){
 //     if(num<2)
@@ -139,3 +41,5 @@ typedef uint16_t hwss_chipver_t;
 //     va_end(args);
 //     return res;
 // }
+
+

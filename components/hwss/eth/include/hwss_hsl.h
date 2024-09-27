@@ -1,9 +1,9 @@
 #pragma once
 
 #include "esp_event.h"
-#include "hwss_sku.h"
+#include "hwss_eth_sku.h"
 #include "hwss_io.h"
-#include "hwss_type.h"
+#include "hwss_eth_type.h"
 
 typedef struct{
     uint16_t    retry_time_ms;
@@ -24,10 +24,10 @@ struct hwss_hsl_s{
     esp_err_t (*start)(hwss_hsl_t *hsl);
     esp_err_t (*stop)(hwss_hsl_t *hsl);
 
-    esp_err_t (*set_peer_addr)(hwss_hsl_t *hsl, const hwss_ip_addr_t addr);
-    esp_err_t (*get_peer_addr)(hwss_hsl_t *hsl, hwss_ip_addr_t addr);
+    esp_err_t (*set_peer_addr)(hwss_hsl_t *hsl, const hwss_eth_ip4_addr_t addr);
+    esp_err_t (*get_peer_addr)(hwss_hsl_t *hsl, hwss_eth_ip4_addr_t addr);
 
-    esp_err_t (*get_peer_mac_addr)(hwss_hsl_t *hsl, hwss_mac_addr_t addr);
+    esp_err_t (*get_peer_mac_addr)(hwss_hsl_t *hsl, hwss_eth_mac_addr_t addr);
 
     esp_err_t (*set_ping_seqnum)(hwss_hsl_t *hsl, const uint16_t *num);
     esp_err_t (*get_ping_seqnum)(hwss_hsl_t *hsl, uint16_t *num);
@@ -41,4 +41,4 @@ struct hwss_hsl_s{
 
 
 
-hwss_hsl_t *hwss_hsl_new(hwss_sku_t sku,esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_hsl_config_t *config);
+hwss_hsl_t *hwss_hsl_new(hwss_eth_sku_t sku,esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_hsl_config_t *config);

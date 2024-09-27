@@ -1,7 +1,7 @@
 #pragma once
 #include "esp_err.h"
 #include "driver/gpio.h"
-#include "hwss_sku.h"
+#include "hwss_eth_sku.h"
 #include "hwss_io.h"
 
 typedef struct hwss_cctl_s hwss_cctl_t;
@@ -54,4 +54,4 @@ static inline esp_err_t hwss_cctl_set_intr_wait_time(hwss_cctl_t *cctl, const ui
     return cctl->set_intr_wait_time(cctl,us);
 }
 
-hwss_cctl_t *hwss_cctl_new(hwss_sku_t sku, hwss_io_t *io, const hwss_cctl_config_t *config);
+hwss_cctl_t *hwss_cctl_new(hwss_eth_sku_t sku, hwss_io_t *io, const hwss_cctl_config_t *config);

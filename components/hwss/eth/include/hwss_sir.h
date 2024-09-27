@@ -1,7 +1,7 @@
 #pragma once
 #include "esp_err.h"
 #include "esp_event.h"
-#include "hwss_sku.h"
+#include "hwss_eth_sku.h"
 #include "hwss_io.h"
 
 typedef struct{
@@ -36,5 +36,5 @@ static inline esp_err_t hwss_sir_stop(hwss_sir_t *sir){
     return sir->stop(sir);
 }
 
-hwss_sir_t *hwss_sir_new(hwss_sku_t sku, esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_sir_config_t *config);
+hwss_sir_t *hwss_sir_new(hwss_eth_sku_t sku, esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_sir_config_t *config);
 

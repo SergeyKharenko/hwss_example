@@ -1,7 +1,7 @@
 #pragma once
 #include <string.h>
 #include "hwss_io.h"
-#include "hwss_type.h"
+#include "hwss_eth_type.h"
 #include "w5100s.h"
 
 #ifdef __cplusplus

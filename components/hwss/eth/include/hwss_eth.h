@@ -12,7 +12,7 @@ typedef enum{
 typedef struct hwss_eth_s hwss_eth_t;
 
 struct hwss_eth_s{
-    hwss_sku_t  sku;
+    hwss_eth_sku_t  sku;
     char name[HWSS_ETH_NAMELEN_MAX];
     hwss_eth_state_t state;
     esp_event_loop_handle_t elp_hdl;
