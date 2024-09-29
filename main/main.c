@@ -116,27 +116,27 @@ static void recv_handler(void *arg, esp_event_base_t event_base,
 
 void app_main(void)
 {
-    // spi_bus_config_t bxcfg={
-    //     .sclk_io_num=6,
-    //     .miso_io_num=2,
-    //     .mosi_io_num=7,
-    //     .quadhd_io_num=-1,
-    //     .quadwp_io_num=-1,
-    // };
+    spi_bus_config_t bcfg={
+        .sclk_io_num=12,
+        .miso_io_num=13,
+        .mosi_io_num=11,
+        .quadhd_io_num=-1,
+        .quadwp_io_num=-1,
+    };
 
-    // spi_bus_initialize(SPI2_HOST,&bxcfg,SPI_DMA_CH_AUTO);
+    // spi_bus_initialize(SPI2_HOST,&bcfg,SPI_DMA_CH_AUTO);
 
     // gpio_config_t gxcfg={
-    //     .pin_bit_mask=1ull<<5,
+    //     .pin_bit_mask=1ull<<GPIO_RST_PIN,
     //     .mode=GPIO_MODE_OUTPUT
     // };
     // gpio_config(&gxcfg);
-    // gpio_set_level(5,1);
+    // gpio_set_level(GPIO_RST_PIN,1);
 
     // vTaskDelay(pdMS_TO_TICKS(500));
-    // gpio_set_level(5,0);
+    // gpio_set_level(GPIO_RST_PIN,0);
     // vTaskDelay(pdMS_TO_TICKS(500));
-    // gpio_set_level(5,1);
+    // gpio_set_level(GPIO_RST_PIN,1);
     // vTaskDelay(pdMS_TO_TICKS(5000));
     
     // hwss_io_t *gio=hwss_io_new(HWSS_ETH_SKU_CH394,HWSS_IO_SPI,&cfg);
@@ -155,14 +155,6 @@ void app_main(void)
     // while(1);
 
     cache=heap_caps_malloc(1024,MALLOC_CAP_DMA);
-    
-    spi_bus_config_t bcfg={
-        .sclk_io_num=12,
-        .miso_io_num=13,
-        .mosi_io_num=11,
-        .quadhd_io_num=-1,
-        .quadwp_io_num=-1,
-    };
 
     spi_bus_initialize(SPI2_HOST,&bcfg,SPI_DMA_CH_AUTO);
 
@@ -175,6 +167,8 @@ void app_main(void)
     // hsl=hwss_hsl_new_w5100s(hdl,io,&lcfg);
 
     hwss_eth_config_t eth_config=HWSS_ETH_W5500_DEFAULT_CONFIG(HWSS_IO_SPI,&cfg,GPIO_IR_PIN,GPIO_RST_PIN);
+    eth_config.cctl.rst_ionum=-1;
+
     eth=hwss_eth_new(&eth_config);
 
     esp_event_handler_register_with(eth->elp_hdl,HWSS_EVENT_ANY_BASE,HWSS_EVENT_ANY_ID,hwss_event_handler,NULL);
@@ -188,10 +182,10 @@ void app_main(void)
 
     hwss_eth_start(eth);
 
-    hwss_eth_ip4_addr_t ip={10,0,0,5};
-    hwss_eth_ip4_addr_t gip={10,0,0,1};
-    // hwss_eth_ip4_addr_t ip={192,168,0,10};
-    // hwss_eth_ip4_addr_t gip={192,168,0,1};
+    // hwss_eth_ip4_addr_t ip={10,0,0,5};
+    // hwss_eth_ip4_addr_t gip={10,0,0,1};
+    hwss_eth_ip4_addr_t ip={192,168,0,10};
+    hwss_eth_ip4_addr_t gip={192,168,0,1};
     hwss_eth_ip4_addr_t mask={255,255,255,0};
 
     eth->hnet->set_source_addr(eth->hnet,ip);
@@ -212,10 +206,7 @@ void app_main(void)
     hwss_hso_get_sock_source_port(eth->hso,0,&sport);
     ESP_LOGI(TAG,"PORT:%u",sport);
 
-    vTaskDelay(pdMS_TO_TICKS(3000));
-
-    hwss_eth_ip4_addr_t blank_addr={0,0,0,0};
-    hwss_eth_mac_addr_t blank_mac={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+    vTaskDelay(pdMS_TO_TICKS(1000));
 
     hwss_hso_socksta_t socksta=HWSS_HSO_SOCK_CLOSED;
     while(1){

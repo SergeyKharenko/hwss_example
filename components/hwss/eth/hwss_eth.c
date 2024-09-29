@@ -18,7 +18,8 @@ typedef struct{
     EventGroupHandle_t  *sock_egps;
     EventGroupHandle_t  global_egp;
 
-    hwss_hso_socksta_t  sockstas[HWSS_ETH_SOCKNUM_MAX];
+    bool                sock_use_stas[HWSS_ETH_SOCKNUM_MAX];
+    hwss_hso_socksta_t  sock_stas[HWSS_ETH_SOCKNUM_MAX];
 }hwss_eth_pro_t;
 
 static void hwss_eth_hir_handler(void *arg, esp_event_base_t event_base,
@@ -130,7 +131,6 @@ static void hwss_eth_sock_disconn_handler(void *arg, esp_event_base_t event_base
     ESP_RETURN_VOID_ON_ERROR(hwss_hso_get_sock_state(eth->hso,id,&sta),TAG,"fail to get sock state");
     if(sta==HWSS_HSO_SOCK_TCP_CLOSEW)
         ESP_RETURN_VOID_ON_ERROR(hwss_hso_ctrl_sock(eth->hso,id,HWSS_HSO_SOCKCTRL_CLOSE),TAG,"fail to close sock");
-    eth_pro->sockstas[id]=HWSS_HSO_SOCK_CLOSED;
 }
 
 hwss_eth_t *hwss_eth_new(const hwss_eth_config_t *config){
@@ -337,23 +337,23 @@ esp_err_t hwss_eth_sock_create(hwss_eth_t *eth, const hwss_proto_t *proto ,hwss_
     case HWSS_PROTO_TCP:
     case HWSS_PROTO_UDP:
         for(hwss_eth_sockid_t sid=0;sid<eth_pro->en_socknum;sid++){
-            if(eth_pro->sockstas[eth_pro->en_socknum-sid-1]!=HWSS_HSO_SOCK_CLOSED)
+            if(eth_pro->sock_use_stas[eth_pro->en_socknum-sid-1])
                 continue;
             hwss_eth_sockid_t actid=eth_pro->en_socknum-sid-1;
             ESP_GOTO_ON_ERROR(hwss_hso_set_sock_proto(eth->hso,actid,proto),err,TAG,"fail to setup sock protocal");
-            eth_pro->sockstas[actid]=true;
+            eth_pro->sock_use_stas[actid]=true;
             *id=actid;
             return ESP_OK;
         }
         return ESP_FAIL;
 
     case HWSS_PROTO_MACRAW:
-        if(eth_pro->sock_ocupy_stats[0]){
+        if(eth_pro->sock_use_stas[0]){
             ESP_LOGE(TAG,"Only SOCK0 support MACRAW, but it has been ocupied!");
             return ESP_FAIL;
         }
         ESP_GOTO_ON_ERROR(hwss_hso_set_sock_proto(eth->hso,0,proto),err,TAG,"fail to setup sock protocal");
-        eth_pro->sock_ocupy_stats[0]=true;
+        eth_pro->sock_use_stas[0]=true;
         *id=0;
         break;
     
@@ -365,6 +365,9 @@ err:
 }
 
 esp_err_t hwss_eth_sock_destroy(hwss_eth_t *eth, const hwss_eth_sockid_t *id){
+    esp_err_t ret=ESP_OK;
+    hwss_eth_pro_t *eth_pro=__containerof(eth,hwss_eth_pro_t,super);
 
+    
 }
 

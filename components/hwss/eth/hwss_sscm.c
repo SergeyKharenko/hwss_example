@@ -75,7 +75,7 @@ static void IRAM_ATTR hwss_sscm_sock_polling_timer_cb(void *args){
     }
 
     for(hwss_eth_sockid_t id=0;id<sscm_pro->en_socknum;id++){
-        if(!(gintr&0x01))
+        if(!(gintr&0x0001))
             continue;
         if(sscm_pro->sockact_sta_list[id]==HWSS_SOCKACT_IDLE)
             continue;
@@ -267,7 +267,7 @@ esp_err_t hwss_sscm_intr_process(hwss_sscm_t *sscm){
     ESP_GOTO_ON_ERROR(sscm_drv->get_sock_global_intr_bits(sscm_drv,&gintr),err,TAG,"cannot get socket global interrupt");
 
     for(hwss_eth_sockid_t id=0;id<sscm_pro->en_socknum;id++){
-        if(gintr&0x01 && sscm_pro->sockact_sta_list[id]==HWSS_SOCKACT_IDLE){
+        if(gintr&0x0001 && sscm_pro->sockact_sta_list[id]==HWSS_SOCKACT_IDLE){
             ESP_GOTO_ON_ERROR(sscm_drv->get_sock_intr(sscm_drv,id,&sintr),err,TAG,"cannot read sock%u status",id);
 
             ESP_GOTO_ON_ERROR(hwss_sscm_sock_event_post(sscm_pro,id,sintr),err,TAG,"fail to post event");
