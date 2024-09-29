@@ -5,11 +5,6 @@
 #include "hwss_netif_types.h"
 
 typedef struct{
-
-}hwss_netif_config_t;
-
-
-typedef struct{
     uint8_t mac[HWSS_NETIF_MAX_HWADDR_LEN];
     hwss_netif_ip_info_t* ip_info;
     hwss_netif_ip_info_t* ip_info_old;

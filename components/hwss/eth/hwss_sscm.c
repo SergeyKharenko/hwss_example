@@ -66,9 +66,10 @@ err:
 static void IRAM_ATTR hwss_sscm_sock_polling_timer_cb(void *args){
     hwss_sscm_pro_t *sscm_pro=(hwss_sscm_pro_t *)args;
     hwss_sscm_drv_t *sscm_drv=sscm_pro->drv;
-    uint8_t gintr=0,sintr=0;
+    uint16_t gintr=0;
+    uint8_t sintr=0;
 
-    if(sscm_drv->get_sock_global_intr(sscm_drv,&gintr)!=ESP_OK){
+    if(sscm_drv->get_sock_global_intr_bits(sscm_drv,&gintr)!=ESP_OK){
         ESP_LOGE(TAG,"cannot get socket global interrupt");
         return;
     }
@@ -260,9 +261,10 @@ esp_err_t hwss_sscm_intr_process(hwss_sscm_t *sscm){
     esp_err_t ret=ESP_OK;
     hwss_sscm_pro_t *sscm_pro=__containerof(sscm,hwss_sscm_pro_t,super);
     hwss_sscm_drv_t *sscm_drv=sscm_pro->drv;
-    uint8_t gintr=0,sintr=0;
+    uint16_t gintr=0;
+    uint8_t sintr=0;
 
-    ESP_GOTO_ON_ERROR(sscm_drv->get_sock_global_intr(sscm_drv,&gintr),err,TAG,"cannot get socket global interrupt");
+    ESP_GOTO_ON_ERROR(sscm_drv->get_sock_global_intr_bits(sscm_drv,&gintr),err,TAG,"cannot get socket global interrupt");
 
     for(hwss_eth_sockid_t id=0;id<sscm_pro->en_socknum;id++){
         if(gintr&0x01 && sscm_pro->sockact_sta_list[id]==HWSS_SOCKACT_IDLE){

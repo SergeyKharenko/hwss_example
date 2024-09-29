@@ -71,7 +71,7 @@ typedef struct hwss_netif_inherent_config {
     const char * if_desc;            /*!< textual description of the interface */
 } hwss_netif_inherent_config_t;
 
-typedef struct esp_netif_config {
+typedef struct hwss_netif_config {
     hwss_netif_inherent_config_t *base;
 
 }hwss_netif_config_t;

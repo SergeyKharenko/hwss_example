@@ -32,8 +32,8 @@ typedef enum{
 
 typedef struct{
     uint8_t     en_socknum;
-    uint8_t     tx_buffsize_kb[HWSS_SOCKNUM_MAX];
-    uint8_t     rx_buffsize_kb[HWSS_SOCKNUM_MAX];
+    uint8_t     tx_buffsize_kb[HWSS_ETH_SOCKNUM_MAX];
+    uint8_t     rx_buffsize_kb[HWSS_ETH_SOCKNUM_MAX];
 
     uint32_t    sock_polling_period_ms;
     uint32_t    sock_active_threshold_ms;

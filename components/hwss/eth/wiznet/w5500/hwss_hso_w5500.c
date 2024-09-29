@@ -7,9 +7,6 @@
 #include "drv_w5500.h"
 #include "hwss_hso_wiznet.h"
 
-#define W5500_SOCKNUM                                       8
-#define W5500_SOCK_CACHE_SIZE_KB                            16
-
 static const uint8_t    w5500_sock_mode_default=            W5500_Sn_MR_CLOSE;
 static const uint16_t   w5500_sock_port_defualt=            0x0000;
 static const uint8_t    w5500_sock_dest_mac_addr_default[]= {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
@@ -68,10 +65,13 @@ static esp_err_t hwss_hso_w5500_init(hwss_hso_t *hso){
         ESP_GOTO_ON_ERROR(W5500_setSn_DIPR(hso_w5500->io,id,w5500_sock_dest_addr_default),err,TAG,"cannot write Sn_DIPR");
         ESP_GOTO_ON_ERROR(W5500_setSn_DPORT(hso_w5500->io,id,&w5500_sock_dest_port_default),err,TAG,"cannot write Sn_DPORT");
         ESP_GOTO_ON_ERROR(W5500_setSn_MSSR(hso_w5500->io,id,&w5500_sock_mss_default),err,TAG,"cannot write Sn_MSSR");
-        ESP_GOTO_ON_ERROR(W5500_setSn_RXBUF_SIZE(hso_w5500->io,id,&(hso_w5500->rxbuf_size_kb[id])),err,TAG,"cannot write Sn_RXBUF_SIZE");
-        ESP_GOTO_ON_ERROR(W5500_setSn_TXBUF_SIZE(hso_w5500->io,id,&(hso_w5500->txbuf_size_kb[id])),err,TAG,"cannot write Sn_TXBUF_SIZE");
         ESP_GOTO_ON_ERROR(W5500_setSn_FRAG(hso_w5500->io,id,&w5500_sock_frag_default),err,TAG,"cannot write Sn_FRAG");
         ESP_GOTO_ON_ERROR(W5500_setSn_KPALVTR(hso_w5500->io,id,&w5500_sock_keepalive_tick_default),err,TAG,"cannot write Sn_KPALVTR");
+    }
+
+    for(hwss_eth_sockid_t id=0;id<W5500_SOCKNUM;id++){
+        ESP_GOTO_ON_ERROR(W5500_setSn_RXBUF_SIZE(hso_w5500->io,id,&(hso_w5500->rxbuf_size_kb[id])),err,TAG,"cannot write Sn_RXBUF_SIZE");
+        ESP_GOTO_ON_ERROR(W5500_setSn_TXBUF_SIZE(hso_w5500->io,id,&(hso_w5500->txbuf_size_kb[id])),err,TAG,"cannot write Sn_TXBUF_SIZE");
     }
 
 err:
@@ -424,7 +424,7 @@ hwss_hso_t *hwss_hso_new_w5500(esp_event_loop_handle_t elp, hwss_io_t *io, hwss_
     ESP_GOTO_ON_FALSE(config->en_socknum<=W5500_SOCKNUM,NULL,err,TAG,"max socket of W5500 is 8");
 
     uint16_t tx_cache_size_kb=0, rx_cache_size_kb=0;
-    for(hwss_eth_sockid_t id=0;id<config->en_socknum;id++){
+    for(hwss_eth_sockid_t id=0;id<W5500_SOCKNUM;id++){
         tx_cache_size_kb+=config->tx_buffsize_kb[id];
         rx_cache_size_kb+=config->rx_buffsize_kb[id];
     }
@@ -465,8 +465,8 @@ hwss_hso_t *hwss_hso_new_w5500(esp_event_loop_handle_t elp, hwss_io_t *io, hwss_
 
     hso->io=io;
     hso->en_socknum=config->en_socknum;
-    memcpy(hso->txbuf_size_kb,config->tx_buffsize_kb,hso->en_socknum);
-    memcpy(hso->rxbuf_size_kb,config->rx_buffsize_kb,hso->en_socknum);
+    memcpy(hso->txbuf_size_kb,config->tx_buffsize_kb,W5500_SOCKNUM);
+    memcpy(hso->rxbuf_size_kb,config->rx_buffsize_kb,W5500_SOCKNUM);
 
     return &hso->super;
 

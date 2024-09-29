@@ -38,10 +38,15 @@ list(APPEND srcs
                 # "eth/wiznet/w5100s/hwss_hsl_w5100s.c"
                 # "eth/wiznet/w5100s/hwss_hnet_w5100s.c"
                 # "eth/wiznet/w5100s/hwss_hso_w5100s.c"
+
+                "eth/wch/ch394/hwss_io_ch394.c"
                 )
 list(APPEND inc_dirs    "eth/wiznet" 
                         "eth/wiznet/w5500" 
                         # "eth/wiznet/w5100s"
+
+                        "eth/wch"
+                        "eth/wch/ch394"
 )
 
 idf_component_register(SRCS ${srcs}

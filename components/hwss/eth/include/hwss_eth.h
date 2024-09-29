@@ -46,4 +46,9 @@ esp_err_t hwss_eth_deinit(hwss_eth_t *eth);
 esp_err_t hwss_eth_start(hwss_eth_t *eth);
 esp_err_t hwss_eth_stop(hwss_eth_t *eth);
 
-esp_err_t hwss_eth_print_info(const hwss_eth_t *eth);
+esp_err_t hwss_eth_print_info(hwss_eth_t *eth);
+
+esp_err_t hwss_eth_sock_create(hwss_eth_t *eth, const hwss_proto_t *proto ,hwss_eth_sockid_t *id);
+esp_err_t hwss_eth_sock_destroy(hwss_eth_t *eth, const hwss_eth_sockid_t *id);
+
+

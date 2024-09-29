@@ -4,7 +4,7 @@
 #define HWSS_DEVID_BITS                     4
 #define HWSS_SOCKID_BITS                    4
 
-#define HWSS_SOCKNUM_MAX                    16
+#define HWSS_ETH_SOCKNUM_MAX                16
 
 #define HWSS_ETH_NAMELEN_MAX                16
 

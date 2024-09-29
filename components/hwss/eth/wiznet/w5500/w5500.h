@@ -8,6 +8,9 @@ extern "C" {
 
 //WIZNET OUI: 00:08:DC
 
+#define W5500_SOCKNUM                   8
+#define W5500_SOCK_CACHE_SIZE_KB        16
+
 #define _W5500_IO_BASE_                 0x00000000
 
 #define _W5500_SPI_READ_			    (0x00 << 2) //< SPI interface Read operation in Control Phase

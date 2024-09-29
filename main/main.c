@@ -5,6 +5,8 @@
 #include "hwss_eth_config.h"
 #include "hwss_eth.h"
 
+#include "drv_ch394.h"
+
 const gpio_num_t GPIO_RST_PIN=9;
 const gpio_num_t GPIO_IR_PIN=14;
 
@@ -80,7 +82,7 @@ static void hwss_event_handler(void *arg, esp_event_base_t event_base,
     case HWSS_HIR_EVENT_TRIGGER:
         break;
 
-    case HWSS_SSCM_EVENT_CONNECT:
+    case HWSS_SSCM_EVENT_CONNECT: 
         ESP_LOGI(TAG,"SOCK CONNECT");
         break;
 
@@ -114,6 +116,44 @@ static void recv_handler(void *arg, esp_event_base_t event_base,
 
 void app_main(void)
 {
+    // spi_bus_config_t bxcfg={
+    //     .sclk_io_num=6,
+    //     .miso_io_num=2,
+    //     .mosi_io_num=7,
+    //     .quadhd_io_num=-1,
+    //     .quadwp_io_num=-1,
+    // };
+
+    // spi_bus_initialize(SPI2_HOST,&bxcfg,SPI_DMA_CH_AUTO);
+
+    // gpio_config_t gxcfg={
+    //     .pin_bit_mask=1ull<<5,
+    //     .mode=GPIO_MODE_OUTPUT
+    // };
+    // gpio_config(&gxcfg);
+    // gpio_set_level(5,1);
+
+    // vTaskDelay(pdMS_TO_TICKS(500));
+    // gpio_set_level(5,0);
+    // vTaskDelay(pdMS_TO_TICKS(500));
+    // gpio_set_level(5,1);
+    // vTaskDelay(pdMS_TO_TICKS(5000));
+    
+    // hwss_io_t *gio=hwss_io_new(HWSS_ETH_SKU_CH394,HWSS_IO_SPI,&cfg);
+    // if(gio->init(gio)!=ESP_OK)
+    //     ESP_LOGE(TAG,"IO Failed");
+
+    // hwss_eth_mac_addr_t ch394_mac;
+    // CH394_GetMAC(gio,ch394_mac);
+    // ESP_LOGI(TAG,"MAC: %X:%X:%X:%X:%X:%X",ch394_mac[0],ch394_mac[1],ch394_mac[2],ch394_mac[3],ch394_mac[4],ch394_mac[5]);
+    // uint8_t ver;
+    // CH394_GetCHIPV(gio,&ver);
+    // ESP_LOGI(TAG,"VER:%X",ver);
+    // uint8_t phys;
+    // CH394_GetPHY_CFG(gio,&phys);
+    // ESP_LOGI(TAG,"PHYS:%X",phys);
+    // while(1);
+
     cache=heap_caps_malloc(1024,MALLOC_CAP_DMA);
     
     spi_bus_config_t bcfg={
@@ -125,11 +165,6 @@ void app_main(void)
     };
 
     spi_bus_initialize(SPI2_HOST,&bcfg,SPI_DMA_CH_AUTO);
-
-    // hwss_io_t *io=hwss_io_new_w5500(HWSS_IO_SPI,&cfg);
-    // hwss_phy_t *phy=hwss_phy_new_w5500(io,&pcfg);
-    // hwss_mac_t *mac=hwss_mac_new_w5500(io,&mcfg);
-    // hwss_hnet_t *hnet=hwss_hnet_new_w5500(io,&ncfg);
 
     // io=hwss_io_new_w5100s(HWSS_IO_SPI,&cfg);
     // hir=hwss_hir_new(hdl,&ircfg);
@@ -153,10 +188,10 @@ void app_main(void)
 
     hwss_eth_start(eth);
 
-    // hwss_eth_ip4_addr_t ip={10,0,0,5};
-    // hwss_eth_ip4_addr_t gip={10,0,0,1};
-    hwss_eth_ip4_addr_t ip={192,168,0,10};
-    hwss_eth_ip4_addr_t gip={192,168,0,1};
+    hwss_eth_ip4_addr_t ip={10,0,0,5};
+    hwss_eth_ip4_addr_t gip={10,0,0,1};
+    // hwss_eth_ip4_addr_t ip={192,168,0,10};
+    // hwss_eth_ip4_addr_t gip={192,168,0,1};
     hwss_eth_ip4_addr_t mask={255,255,255,0};
 
     eth->hnet->set_source_addr(eth->hnet,ip);
@@ -171,60 +206,36 @@ void app_main(void)
     /////// TCP TEST /////////
     hwss_proto_t pro=HWSS_PROTO_TCP;
     hwss_eth_port_t sport=5590;
-    eth->hso->set_sock_proto(eth->hso,0,&pro);
-    eth->hso->set_sock_source_port(eth->hso,0,&sport);
+    hwss_hso_set_sock_proto(eth->hso,0,&pro);
+    hwss_hso_set_sock_source_port(eth->hso,0,&sport);
 
-    eth->hso->get_sock_source_port(eth->hso,0,&sport);
+    hwss_hso_get_sock_source_port(eth->hso,0,&sport);
     ESP_LOGI(TAG,"PORT:%u",sport);
 
     vTaskDelay(pdMS_TO_TICKS(3000));
 
-    eth->hso->ctrl_sock(eth->hso,0,HWSS_HSO_SOCKCTRL_OPEN);
+    hwss_eth_ip4_addr_t blank_addr={0,0,0,0};
+    hwss_eth_mac_addr_t blank_mac={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
 
-    hwss_hso_socksta_t socksta=0;
+    hwss_hso_socksta_t socksta=HWSS_HSO_SOCK_CLOSED;
     while(1){
-        eth->hso->get_sock_state(eth->hso,0,&socksta);
-        if(socksta==HWSS_HSO_SOCK_TCP_INIT)
-            break;
-        ESP_LOGI(TAG,"STA: %02X",socksta);
+        hwss_hso_get_sock_state(eth->hso,0,&socksta);
+        switch(socksta){
+            case HWSS_HSO_SOCK_CLOSED:
+                hwss_hso_ctrl_sock(eth->hso,0,HWSS_HSO_SOCKCTRL_OPEN);
+                break;
+
+            case HWSS_HSO_SOCK_TCP_INIT:
+                hwss_hso_ctrl_sock(eth->hso,0,HWSS_HSO_SOCKCTRL_LISTEN);
+                break;
+
+            default:
+                break;
+        }
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 
-    ESP_LOGI(TAG,"sock opened!");
-
-    eth->hso->ctrl_sock(eth->hso,0,HWSS_HSO_SOCKCTRL_LISTEN);
-    while(1){
-        eth->hso->get_sock_state(eth->hso,0,&socksta);
-        if(socksta==HWSS_HSO_SOCK_TCP_LISTEN)
-            break;
-        ESP_LOGI(TAG,"STA: %02X",socksta);
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
-    ESP_LOGI(TAG,"sock listening");
-
-    uint8_t rsta;
-    while(1){
-        eth->hso->get_sock_state_raw(eth->hso,0,&rsta);
-        // switch (socksta)
-        // {
-        // case HWSS_HSO_SOCK_TCP_LISTEN:
-        //     break;
-
-        // case HWSS_HSO_SOCK_TCP_ESTAB:
-        //     eth->hso->write_tx_buffer(eth->hso,0,(uint8_t *)tcache,strlen(data));
-        //     eth->hso->ctrl_sock(eth->hso,0,HWSS_HSO_SOCKCTRL_SEND);
-        //     break;
-        // default:
-        //     ESP_LOGW(TAG,"EXIT");
-        //     goto ex;
-        //     break;
-        // }
-        ESP_LOGI(TAG,"STA: %X",rsta);
-        vTaskDelay(pdMS_TO_TICKS(500));
-    }
-
-
-
+    
     /////// UDP TEST /////////
     // hwss_proto_t pro=HWSS_PROTO_UDP;
     // hwss_eth_port_t sport=5590;

@@ -113,10 +113,11 @@ typedef struct{
 ////////
 //////// HSO State Control Manager Driver Implement
 ////////
-static esp_err_t hwss_hso_scm_w5100s_get_sock_global_intr(hwss_hso_scm_t *hso_scm, uint8_t *intr){
+static esp_err_t hwss_hso_scm_w5100s_get_sock_global_intr_bits(hwss_hso_scm_t *hso_scm, uint16_t *intr){
     esp_err_t ret=ESP_OK;
     hwss_hso_t *hso=hso_scm->hso;
     hwss_hso_w5100s_t *hso_w5100s=__containerof(hso,hwss_hso_w5100s_t,super);
+    uint8_t intr8=0;
 
     ESP_GOTO_ON_ERROR(W5100S_getIR(hso->io,hso_w5100s->dma_gintr),err,TAG,"cannot read IR");
     *intr=(*hso_w5100s->dma_gintr)&0x0F;
@@ -753,7 +754,7 @@ hwss_hso_t *hwss_hso_new_w5100s(esp_event_loop_handle_t elp, hwss_io_t *io, hwss
     ESP_GOTO_ON_FALSE(hso->super.scm,NULL,err,TAG,"cannot create hso_scm");
 
     hwss_hso_scm_t *hso_scm=hso->super.scm;
-    hso_scm->drv.get_sock_global_intr=hwss_hso_scm_w5100s_get_sock_global_intr;
+    hso_scm->drv.get_sock_global_intr_bits=hwss_hso_scm_w5100s_get_sock_global_intr_bits;
     hso_scm->drv.set_sock_global_intr_enable=hwss_hso_scm_w5100s_set_sock_global_intr_enable;
     hso_scm->drv.set_sock_global_intr_enable_all=hwss_hso_scm_w5100s_set_sock_global_intr_enable_all;
     hso_scm->drv.get_sock_intr=hwss_hso_scm_w5100s_get_sock_intr;

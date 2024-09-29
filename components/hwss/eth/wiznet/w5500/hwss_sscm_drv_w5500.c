@@ -15,10 +15,13 @@ typedef struct{
 ////////
 //////// HSO State Control Manager Driver Implement
 ////////
-static esp_err_t hwss_sscm_drv_w5500_get_sock_global_intr(hwss_sscm_drv_t *drv, uint8_t *intr){
+static esp_err_t hwss_sscm_drv_w5500_get_sock_global_intr_bits(hwss_sscm_drv_t *drv, uint16_t *intr){
     esp_err_t ret=ESP_OK;
     hwss_sscm_drv_w5500_t *drv_w5500=__containerof(drv,hwss_sscm_drv_w5500_t,super);
-    ESP_GOTO_ON_ERROR(W5500_getSIR(drv_w5500->io,intr),err,TAG,"cannot read SIR");
+
+    uint8_t intr8=0;
+    ESP_GOTO_ON_ERROR(W5500_getSIR(drv_w5500->io,&intr8),err,TAG,"cannot read SIR");
+    *intr=(uint16_t)intr8;
 err:
     return ret;
 }
@@ -112,7 +115,7 @@ hwss_sscm_drv_t *hwss_sscm_drv_new_w5500(hwss_io_t *io){
     drv->io=io;
 
     drv->super.clear_sock_intr=hwss_sscm_drv_w5500_clear_sock_intr;
-    drv->super.get_sock_global_intr=hwss_sscm_drv_w5500_get_sock_global_intr;
+    drv->super.get_sock_global_intr_bits=hwss_sscm_drv_w5500_get_sock_global_intr_bits;
     drv->super.get_sock_intr=hwss_sscm_drv_w5500_get_sock_intr;
     drv->super.set_sock_global_intr_enable=hwss_sscm_drv_w5500_set_sock_global_intr_enable;
     drv->super.set_sock_global_intr_enable_all=hwss_sscm_drv_w5500_set_sock_global_intr_enable_all;

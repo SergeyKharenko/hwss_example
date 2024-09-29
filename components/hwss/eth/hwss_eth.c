@@ -11,12 +11,14 @@ static const char *HWSS_ETH_NAME_HEADER="HWSSETH_";
 static uint8_t hwss_eth_gen_id=0;
 
 typedef struct{
-    hwss_eth_t super;
+    hwss_eth_t          super;
 
-    uint8_t     en_socknum;
+    uint8_t             en_socknum;
 
-    EventGroupHandle_t *sock_egps;
-    EventGroupHandle_t global_egp;
+    EventGroupHandle_t  *sock_egps;
+    EventGroupHandle_t  global_egp;
+
+    hwss_hso_socksta_t  sockstas[HWSS_ETH_SOCKNUM_MAX];
 }hwss_eth_pro_t;
 
 static void hwss_eth_hir_handler(void *arg, esp_event_base_t event_base,
@@ -116,7 +118,19 @@ static void hwss_eth_sscm_state_handler(void *arg, esp_event_base_t event_base,
 
         default: break;
     }
+}
 
+static void hwss_eth_sock_disconn_handler(void *arg, esp_event_base_t event_base,
+                                        int32_t event_id, void *event_data){
+    hwss_eth_t *eth=(hwss_eth_t *)arg;
+    hwss_eth_pro_t *eth_pro=__containerof(eth,hwss_eth_pro_t,super);
+    hwss_eth_sockid_t id=*(hwss_eth_sockid_t *)event_data;
+    hwss_hso_socksta_t sta;
+
+    ESP_RETURN_VOID_ON_ERROR(hwss_hso_get_sock_state(eth->hso,id,&sta),TAG,"fail to get sock state");
+    if(sta==HWSS_HSO_SOCK_TCP_CLOSEW)
+        ESP_RETURN_VOID_ON_ERROR(hwss_hso_ctrl_sock(eth->hso,id,HWSS_HSO_SOCKCTRL_CLOSE),TAG,"fail to close sock");
+    eth_pro->sockstas[id]=HWSS_HSO_SOCK_CLOSED;
 }
 
 hwss_eth_t *hwss_eth_new(const hwss_eth_config_t *config){
@@ -236,6 +250,9 @@ esp_err_t hwss_eth_start(hwss_eth_t *eth){
                     (void *)eth),err,TAG,"cannot hook hir handler");
     ESP_GOTO_ON_ERROR(esp_event_handler_register_with(eth->elp_hdl,HWSS_SSCM_EVENT,HWSS_EVENT_ANY_ID,hwss_eth_sscm_state_handler,
                     (void *)eth),err,TAG,"cannot hook sscm handler");
+    ESP_GOTO_ON_ERROR(esp_event_handler_register_with(eth->elp_hdl,HWSS_SSCM_EVENT,HWSS_SSCM_EVENT_DISCONN,hwss_eth_sock_disconn_handler,
+                    (void *)eth),err,TAG,"cannot hook sock disconnect handler");
+    
     ESP_GOTO_ON_ERROR(esp_event_post(HWSS_ETH_EVENT,HWSS_ETH_EVENT_START,(void *)eth,sizeof(hwss_eth_t *),0),err,TAG,
                         "fail to post event");
 err:
@@ -258,7 +275,7 @@ err:
 }
 
 
-esp_err_t hwss_eth_print_info(const hwss_eth_t *eth){
+esp_err_t hwss_eth_print_info(hwss_eth_t *eth){
     esp_err_t ret=ESP_OK;
 
     ESP_LOGI(TAG,"########################");
@@ -310,3 +327,44 @@ esp_err_t hwss_eth_print_info(const hwss_eth_t *eth){
 err:
     return ret;
 }
+
+esp_err_t hwss_eth_sock_create(hwss_eth_t *eth, const hwss_proto_t *proto ,hwss_eth_sockid_t *id){
+    esp_err_t ret=ESP_OK;
+    hwss_eth_pro_t *eth_pro=__containerof(eth,hwss_eth_pro_t,super);
+
+    switch (*proto)
+    {
+    case HWSS_PROTO_TCP:
+    case HWSS_PROTO_UDP:
+        for(hwss_eth_sockid_t sid=0;sid<eth_pro->en_socknum;sid++){
+            if(eth_pro->sockstas[eth_pro->en_socknum-sid-1]!=HWSS_HSO_SOCK_CLOSED)
+                continue;
+            hwss_eth_sockid_t actid=eth_pro->en_socknum-sid-1;
+            ESP_GOTO_ON_ERROR(hwss_hso_set_sock_proto(eth->hso,actid,proto),err,TAG,"fail to setup sock protocal");
+            eth_pro->sockstas[actid]=true;
+            *id=actid;
+            return ESP_OK;
+        }
+        return ESP_FAIL;
+
+    case HWSS_PROTO_MACRAW:
+        if(eth_pro->sock_ocupy_stats[0]){
+            ESP_LOGE(TAG,"Only SOCK0 support MACRAW, but it has been ocupied!");
+            return ESP_FAIL;
+        }
+        ESP_GOTO_ON_ERROR(hwss_hso_set_sock_proto(eth->hso,0,proto),err,TAG,"fail to setup sock protocal");
+        eth_pro->sock_ocupy_stats[0]=true;
+        *id=0;
+        break;
+    
+    default: return ESP_ERR_INVALID_ARG;
+    }
+
+err:
+    return ret;
+}
+
+esp_err_t hwss_eth_sock_destroy(hwss_eth_t *eth, const hwss_eth_sockid_t *id){
+
+}
+
