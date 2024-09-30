@@ -43,6 +43,7 @@ hwss_io_spi_config_t cfg={
 // };
 
 hwss_eth_t *eth;
+hwss_eth_sockid_t sockid;
 
 hwss_eth_mac_addr_t dest_mac;
 
@@ -98,22 +99,6 @@ static void hwss_event_handler(void *arg, esp_event_base_t event_base,
 
 static uint8_t *cache;
 
-static void recv_handler(void *arg, esp_event_base_t event_base,
-                        int32_t event_id, void *event_data){
-    uint16_t len=0;
-    eth->hso->get_rx_length(eth->hso,0,&len);
-    // eth->hso->drop_rx_buffer(eth->hso,0);
-    // ESP_LOGI(TAG,"LEN: %u",len);
-
-    eth->hso->read_rx_buffer(eth->hso,0,cache,len);
-    eth->hso->ctrl_sock(eth->hso,0,HWSS_HSO_SOCKCTRL_RECV);
-    cache[len]='\0';
-    ESP_LOGI(TAG,"Recv:\t %s",cache);
-
-    eth->hso->write_tx_buffer(eth->hso,0,(uint8_t *)cache,len);
-    eth->hso->ctrl_sock(eth->hso,0,HWSS_HSO_SOCKCTRL_SEND);
-}
-
 void app_main(void)
 {
     spi_bus_config_t bcfg={
@@ -167,12 +152,13 @@ void app_main(void)
     // hsl=hwss_hsl_new_w5100s(hdl,io,&lcfg);
 
     hwss_eth_config_t eth_config=HWSS_ETH_W5500_DEFAULT_CONFIG(HWSS_IO_SPI,&cfg,GPIO_IR_PIN,GPIO_RST_PIN);
-    eth_config.cctl.rst_ionum=-1;
+
+    uint8_t size[]={4,4,4,4};
+    hwss_eth_config_set_tx_rx_buffsize_kb(&eth_config,4,size,size);
 
     eth=hwss_eth_new(&eth_config);
 
     esp_event_handler_register_with(eth->elp_hdl,HWSS_EVENT_ANY_BASE,HWSS_EVENT_ANY_ID,hwss_event_handler,NULL);
-    esp_event_handler_register_with(eth->elp_hdl,HWSS_SSCM_EVENT,HWSS_SSCM_EVENT_RECV,recv_handler,NULL);
 
     gpio_install_isr_service(0);
     esp_event_loop_create_default();
@@ -182,50 +168,69 @@ void app_main(void)
 
     hwss_eth_start(eth);
 
-    // hwss_eth_ip4_addr_t ip={10,0,0,5};
-    // hwss_eth_ip4_addr_t gip={10,0,0,1};
-    hwss_eth_ip4_addr_t ip={192,168,0,10};
-    hwss_eth_ip4_addr_t gip={192,168,0,1};
+    hwss_eth_ip4_addr_t ip={10,0,0,5};
+    hwss_eth_ip4_addr_t gip={10,0,0,1};
+    // hwss_eth_ip4_addr_t ip={192,168,0,10};
+    // hwss_eth_ip4_addr_t gip={192,168,0,1};
     hwss_eth_ip4_addr_t mask={255,255,255,0};
 
     eth->hnet->set_source_addr(eth->hnet,ip);
     eth->hnet->set_gateway_addr(eth->hnet,gip);
     eth->hnet->set_subnet_mask(eth->hnet,mask);
 
-    char *data="Hello World!\n";
-
-    char *tcache=heap_caps_aligned_alloc(4,strlen(data)+1,MALLOC_CAP_DMA);
-    memcpy(tcache,data,strlen(data));
-
     /////// TCP TEST /////////
-    hwss_proto_t pro=HWSS_PROTO_TCP;
     hwss_eth_port_t sport=5590;
-    hwss_hso_set_sock_proto(eth->hso,0,&pro);
-    hwss_hso_set_sock_source_port(eth->hso,0,&sport);
+    hwss_eth_port_t dport=5700;
+    hwss_eth_ip4_addr_t dip={10,0,0,10};
 
-    hwss_hso_get_sock_source_port(eth->hso,0,&sport);
-    ESP_LOGI(TAG,"PORT:%u",sport);
+    hwss_eth_sock_create(eth,HWSS_PROTO_TCP,&sockid);
+    hwss_hso_set_sock_source_port(eth->hso,sockid,&sport);
+    hwss_hso_set_sock_dest_addr(eth->hso,sockid,dip);
+    hwss_hso_set_sock_dest_port(eth->hso,sockid,&dport);
 
+    ESP_LOGI(TAG,"USE SOCK %X",sockid);
     vTaskDelay(pdMS_TO_TICKS(1000));
 
-    hwss_hso_socksta_t socksta=HWSS_HSO_SOCK_CLOSED;
+    uint8_t ccnt=0;
+    esp_err_t ret;
+    uint16_t rlen;
+
     while(1){
-        hwss_hso_get_sock_state(eth->hso,0,&socksta);
-        switch(socksta){
-            case HWSS_HSO_SOCK_CLOSED:
-                hwss_hso_ctrl_sock(eth->hso,0,HWSS_HSO_SOCKCTRL_OPEN);
-                break;
-
-            case HWSS_HSO_SOCK_TCP_INIT:
-                hwss_hso_ctrl_sock(eth->hso,0,HWSS_HSO_SOCKCTRL_LISTEN);
-                break;
-
-            default:
-                break;
+        hwss_eth_sock_open(eth,sockid);
+        ret=hwss_eth_sock_connect(eth,sockid);
+        if(ret!=ESP_OK){
+            hwss_eth_sock_close(eth,sockid);
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            continue;
         }
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
+        ESP_LOGI(TAG,"CONNECTED");
+        ccnt=0;
+        while(1){
+            ret=hwss_eth_sock_recv_pending(eth,sockid);
+            if(ret!=ESP_OK)
+                break;
+            hwss_eth_sock_recv(eth,sockid,cache,&rlen);
+            ESP_LOGI(TAG,"LOOP");
+            hwss_eth_sock_send(eth,sockid,cache,rlen);
+            ccnt++;
 
+            if(ccnt==5){
+                hwss_eth_sock_disconn(eth,sockid);
+                break;
+            }
+                
+        }
+        hwss_eth_sock_close(eth,sockid);
+    }
+    
+
+
+    // uint8_t sta;
+    // while(1){
+    //     hwss_hso_get_sock_state_raw(eth->hso,sockid,&sta);
+    //     ESP_LOGI(TAG,"STA: %X",sta);
+    //     vTaskDelay(pdMS_TO_TICKS(10));
+    // }
     
     /////// UDP TEST /////////
     // hwss_proto_t pro=HWSS_PROTO_UDP;

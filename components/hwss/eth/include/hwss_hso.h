@@ -1,7 +1,7 @@
 #pragma once
 
 #include "hwss_eth_sku.h"
-#include "hwss_opt.h"
+#include "hwss_eth_opt.h"
 #include "hwss_io.h"
 #include "hwss_hir.h"
 #include "hwss_eth_type.h"

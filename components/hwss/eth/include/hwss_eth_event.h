@@ -43,6 +43,7 @@ typedef enum{
 #define HWSS_SOCK_EVENTBIT_RECV                 1<<2
 #define HWSS_SOCK_EVENTBIT_DISCONN              1<<3
 #define HWSS_SOCK_EVENTBIT_CONNECT              1<<4
+#define HWSS_SOCK_EVENTBIT_CLOSE                1<<5
 
 
 #define HWSS_PHY_EVENTBIT_CONNECTED             1<<0

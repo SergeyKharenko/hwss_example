@@ -28,4 +28,17 @@
     
 
 //     return ESP_OK;
+// }hwss_netif_t    *hwss_netif_new(hwss_netif_config_t *hwss_netif_config);
+
+
+// hwss_netif_t    *hwss_netif_new(hwss_netif_config_t *hwss_netif_config){
+//     if (hwss_netif_config == NULL ||
+//         hwss_netif_config->base->if_key == NULL ||
+//         NULL != esp_netif_get_handle_from_ifkey_unsafe(esp_netif_config->base->if_key)) {
+//         ESP_LOGE(TAG, "%s: Failed to configure netif with config=%p (config or if_key is NULL or duplicate key)",
+//         __func__,  esp_netif_config);
+//         return ESP_FAIL;
+//     }
 // }
+
+// void            hwss_netif_destroy(hwss_netif_t *hwss_netif);

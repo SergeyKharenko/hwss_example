@@ -48,7 +48,20 @@ esp_err_t hwss_eth_stop(hwss_eth_t *eth);
 
 esp_err_t hwss_eth_print_info(hwss_eth_t *eth);
 
-esp_err_t hwss_eth_sock_create(hwss_eth_t *eth, const hwss_proto_t *proto ,hwss_eth_sockid_t *id);
-esp_err_t hwss_eth_sock_destroy(hwss_eth_t *eth, const hwss_eth_sockid_t *id);
+esp_err_t hwss_eth_clear_host_netinfo(hwss_eth_t *eth);
 
+esp_err_t hwss_eth_sock_create(hwss_eth_t *eth, hwss_proto_t proto ,hwss_eth_sockid_t *id);
+esp_err_t hwss_eth_sock_create_with(hwss_eth_t *eth, hwss_proto_t proto , hwss_eth_sockid_t id);
+esp_err_t hwss_eth_sock_destroy(hwss_eth_t *eth, hwss_eth_sockid_t id);
 
+esp_err_t hwss_eth_sock_open(hwss_eth_t *eth, hwss_eth_sockid_t id);
+esp_err_t hwss_eth_sock_listen(hwss_eth_t *eth, hwss_eth_sockid_t id);
+esp_err_t hwss_eth_sock_accept_pending(hwss_eth_t *eth, hwss_eth_sockid_t id);
+esp_err_t hwss_eth_sock_connect(hwss_eth_t *eth, hwss_eth_sockid_t id);
+esp_err_t hwss_eth_sock_disconn(hwss_eth_t *eth, hwss_eth_sockid_t id);
+esp_err_t hwss_eth_sock_close(hwss_eth_t *eth, hwss_eth_sockid_t id);
+esp_err_t hwss_eth_sock_send(hwss_eth_t *eth, hwss_eth_sockid_t id, const uint8_t *data, uint16_t len);
+esp_err_t hwss_eth_sock_send_wait_finish(hwss_eth_t *eth, hwss_eth_sockid_t id);
+esp_err_t hwss_eth_sock_recv_pending(hwss_eth_t *eth, hwss_eth_sockid_t id);
+esp_err_t hwss_eth_sock_recv(hwss_eth_t *eth, hwss_eth_sockid_t id, uint8_t *data, uint16_t *len);
+esp_err_t hwss_eth_sock_recv_drop(hwss_eth_t *eth, hwss_eth_sockid_t id);

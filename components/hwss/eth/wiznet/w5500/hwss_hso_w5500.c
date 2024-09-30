@@ -393,9 +393,6 @@ static esp_err_t hwss_hso_w5500_get_sock_state(hwss_hso_t *hso, hwss_eth_sockid_
         case W5500_SOCK_INIT: *sta=HWSS_HSO_SOCK_TCP_INIT; break;
         case W5500_SOCK_LISTEN: *sta=HWSS_HSO_SOCK_TCP_LISTEN; break;
         case W5500_SOCK_ESTABLISHED: *sta=HWSS_HSO_SOCK_TCP_ESTAB; break;
-        case W5500_SOCK_FIN_WAIT:
-        case W5500_SOCK_CLOSING:
-        case W5500_SOCK_TIME_WAIT:
         case W5500_SOCK_CLOSE_WAIT: *sta=HWSS_HSO_SOCK_TCP_CLOSEW; break;
         case W5500_SOCK_UDP: 
         case W5500_SOCK_MACRAW: *sta=HWSS_HSO_SOCK_OPENED;break;

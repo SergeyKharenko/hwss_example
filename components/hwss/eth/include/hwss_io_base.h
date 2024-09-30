@@ -4,8 +4,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "esp_check.h"
-#include "hwss_opt.h"
 #include "hwss_cache.h"
+#include "hwss_eth_opt.h"
 #include "hwss_io.h"
 
 #ifdef __cplusplus
