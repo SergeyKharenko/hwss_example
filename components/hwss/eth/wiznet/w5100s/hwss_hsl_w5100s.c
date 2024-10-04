@@ -10,143 +10,76 @@ static const char *TAG = "w5100s.hwss_hsl";
 typedef struct{
     hwss_hsl_t  super;
 
+    hwss_io_t   *io;
+
     uint16_t    retry_time_tick;
     uint8_t     retry_cnt;
-
-    uint32_t    check_state_period_ms;
-    esp_timer_handle_t check_state_timer;
-
-    bool        is_started;
 }hwss_hsl_w5100_t;
-
-static void hwss_hsl_w5100s_check_state_timer_cb(void *args){
-    hwss_hsl_w5100_t* hsl_w5100s=(hwss_hsl_w5100_t *)args;
-
-    uint8_t slir;
-    if(W5100S_getSLIR(hsl_w5100s->super.io,&slir)!=ESP_OK){
-        ESP_LOGE(TAG,"cannot read SLIR");
-        return;
-    }
-
-    if(slir&W5100S_SLIR_ARP){
-        if(esp_event_post_to(hsl_w5100s->super.elp_hdl,HWSS_HSL_EVENT,HWSS_HSL_EVENT_ARP,NULL,0,0)!=ESP_OK){
-            ESP_LOGE(TAG,"fail to post event");
-            return;
-        }
-    }
-
-    if(slir&W5100S_SLIR_TIMEOUT){
-        if(esp_event_post_to(hsl_w5100s->super.elp_hdl,HWSS_HSL_EVENT,HWSS_HSL_EVENT_TIMEOUT,NULL,0,0)!=ESP_OK){
-            ESP_LOGE(TAG,"fail to post event");
-            return;
-        }
-    }
-
-    if(slir&W5100S_SLIR_PING){
-        if(esp_event_post_to(hsl_w5100s->super.elp_hdl,HWSS_HSL_EVENT,HWSS_HSL_EVENT_PING,NULL,0,0)!=ESP_OK){
-            ESP_LOGE(TAG,"fail to post event");
-            return;
-        }
-    }
-
-    if(W5100S_setSLIR(hsl_w5100s->super.io,&slir)!=ESP_OK){
-        ESP_LOGE(TAG,"cannot write SLIR");
-        return;
-    }
-}
 
 static esp_err_t hwss_hsl_w5100s_init(hwss_hsl_t *hsl){
     esp_err_t ret=ESP_OK;
     hwss_hsl_w5100_t* hsl_w5100s=__containerof(hsl,hwss_hsl_w5100_t,super);
 
-    ESP_GOTO_ON_ERROR(W5100S_setSLRTR(hsl->io,&hsl_w5100s->retry_time_tick),err,TAG,"cannot write SLRTR");
-    ESP_GOTO_ON_ERROR(W5100S_setSLRCR(hsl->io,&hsl_w5100s->retry_cnt),err,TAG,"cannot write SLRCR");
-
-    uint8_t slir;
-    slir=W5100S_SLIR_ARP|W5100S_SLIR_TIMEOUT|W5100S_SLIR_PING;
-    ESP_GOTO_ON_ERROR(W5100S_setSLIR(hsl->io,&slir),err,TAG,"cannot write SLIR");
-    
-    uint8_t slimr;
-    slimr=0x00;
-    ESP_GOTO_ON_ERROR(W5100S_setSLIMR(hsl->io,&slimr),err,TAG,"cannot write SLIMR");
-
-
+    ESP_GOTO_ON_ERROR(W5100S_setSLRTR(hsl_w5100s->io,&hsl_w5100s->retry_time_tick),err,TAG,"cannot write SLRTR");
+    ESP_GOTO_ON_ERROR(W5100S_setSLRCR(hsl_w5100s->io,&hsl_w5100s->retry_cnt),err,TAG,"cannot write SLRCR");
 
 err:
     return ret;
 }
 
 static esp_err_t hwss_hsl_w5100s_deinit(hwss_hsl_t *hsl){
-    esp_err_t ret=ESP_OK;
-    hwss_hsl_w5100_t* hsl_w5100s=__containerof(hsl,hwss_hsl_w5100_t,super);
-    if(hsl_w5100s->is_started)
-        ESP_GOTO_ON_ERROR(hsl->stop(hsl),err,TAG,"cannot stop hsl");
-
-err:
-    return ret;
-}
-
-static esp_err_t hwss_hsl_w5100s_start(hwss_hsl_t *hsl){
-    esp_err_t ret=ESP_OK;
-    hwss_hsl_w5100_t* hsl_w5100s=__containerof(hsl,hwss_hsl_w5100_t,super);
-
-    if(hsl_w5100s->is_started)
-        return ret;
-    
-    ESP_GOTO_ON_ERROR(esp_timer_start_periodic(hsl_w5100s->check_state_timer,hsl_w5100s->check_state_period_ms*1000),
-                        err,TAG,"cannot start timer");
-    hsl_w5100s->is_started=true;
-err:
-    return ret;
-}
-
-static esp_err_t hwss_hsl_w5100s_stop(hwss_hsl_t *hsl){
-    esp_err_t ret=ESP_OK;
-    hwss_hsl_w5100_t* hsl_w5100s=__containerof(hsl,hwss_hsl_w5100_t,super);
-
-    if(!hsl_w5100s->is_started)
-        return ret;
-
-    ESP_GOTO_ON_ERROR(esp_timer_stop(hsl_w5100s->check_state_timer),err,TAG,"cannot stop timer");
-    hsl_w5100s->is_started=false;
-err:
-    return ret;
+    return ESP_OK;
 }
 
 static esp_err_t hwss_hsl_w5100s_set_peer_addr(hwss_hsl_t *hsl, const hwss_eth_ip4_addr_t addr){
-    return W5100S_setSLPIPR(hsl->io,addr);
+    hwss_hsl_w5100_t* hsl_w5100s=__containerof(hsl,hwss_hsl_w5100_t,super);
+
+    return W5100S_setSLPIPR(hsl_w5100s->io,addr);
 }
 
 static esp_err_t hwss_hsl_w5100s_get_peer_addr(hwss_hsl_t *hsl, hwss_eth_ip4_addr_t addr){
-    return W5100S_getSLPIPR(hsl->io,addr);
+    hwss_hsl_w5100_t* hsl_w5100s=__containerof(hsl,hwss_hsl_w5100_t,super);
+    
+    return W5100S_getSLPIPR(hsl_w5100s->io,addr);
 }
 
 static esp_err_t hwss_hsl_w5100s_get_peer_mac_addr(hwss_hsl_t *hsl, hwss_eth_mac_addr_t addr){
-    return W5100S_getSLPHAR(hsl->io,addr);
+    hwss_hsl_w5100_t* hsl_w5100s=__containerof(hsl,hwss_hsl_w5100_t,super);
+
+    return W5100S_getSLPHAR(hsl_w5100s->io,addr);
 }
 
 static esp_err_t hwss_hsl_w5100s_set_ping_seqnum(hwss_hsl_t *hsl, const uint16_t *num){
-    return W5100S_setPINGSEQR(hsl->io,num);
+    hwss_hsl_w5100_t* hsl_w5100s=__containerof(hsl,hwss_hsl_w5100_t,super);
+
+    return W5100S_setPINGSEQR(hsl_w5100s->io,num);
 }
 
 static esp_err_t hwss_hsl_w5100s_get_ping_seqnum(hwss_hsl_t *hsl, uint16_t *num){
-    return W5100S_getPINGSEQR(hsl->io,num);
+    hwss_hsl_w5100_t* hsl_w5100s=__containerof(hsl,hwss_hsl_w5100_t,super);
+
+    return W5100S_getPINGSEQR(hsl_w5100s->io,num);
 }
 
 static esp_err_t hwss_hsl_w5100s_set_ping_id(hwss_hsl_t *hsl, const uint16_t *id){
-    return W5100S_setPINGIDR(hsl->io,id);
+    hwss_hsl_w5100_t* hsl_w5100s=__containerof(hsl,hwss_hsl_w5100_t,super);
+
+    return W5100S_setPINGIDR(hsl_w5100s->io,id);
 }
 
 static esp_err_t hwss_hsl_w5100s_get_ping_id(hwss_hsl_t *hsl, uint16_t *id){
-    return W5100S_getPINGIDR(hsl->io,id);
+    hwss_hsl_w5100_t* hsl_w5100s=__containerof(hsl,hwss_hsl_w5100_t,super);
+
+    return W5100S_getPINGIDR(hsl_w5100s->io,id);
 }
 
 static esp_err_t hwss_hsl_w5100s_send_ping(hwss_hsl_t *hsl){
     esp_err_t ret=ESP_OK;
-
+    hwss_hsl_w5100_t* hsl_w5100s=__containerof(hsl,hwss_hsl_w5100_t,super);
     uint8_t slcr=0;
+
     while(1){
-        ESP_GOTO_ON_ERROR(W5100S_getSLCR(hsl->io,&slcr),err,TAG,"cannot read SLCR");
+        ESP_GOTO_ON_ERROR(W5100S_getSLCR(hsl_w5100s->io,&slcr),err,TAG,"cannot read SLCR");
         if(slcr&(W5100S_SLCMD_ARP|W5100S_SLCMD_PING))
             continue;
         else
@@ -154,7 +87,7 @@ static esp_err_t hwss_hsl_w5100s_send_ping(hwss_hsl_t *hsl){
     }
 
     slcr=W5100S_SLCMD_PING;
-    ESP_GOTO_ON_ERROR(W5100S_setSLCR(hsl->io,&slcr),err,TAG,"cannot write SLCR");
+    ESP_GOTO_ON_ERROR(W5100S_setSLCR(hsl_w5100s->io,&slcr),err,TAG,"cannot write SLCR");
 
 err:
     return ret;
@@ -162,10 +95,11 @@ err:
 
 static esp_err_t hwss_hsl_w5100s_send_arp(hwss_hsl_t *hsl){
     esp_err_t ret=ESP_OK;
-
+    hwss_hsl_w5100_t* hsl_w5100s=__containerof(hsl,hwss_hsl_w5100_t,super);
     uint8_t slcr=0;
+
     while(1){
-        ESP_GOTO_ON_ERROR(W5100S_getSLCR(hsl->io,&slcr),err,TAG,"cannot read SLCR");
+        ESP_GOTO_ON_ERROR(W5100S_getSLCR(hsl_w5100s->io,&slcr),err,TAG,"cannot read SLCR");
         if(slcr&(W5100S_SLCMD_ARP|W5100S_SLCMD_PING))
             continue;
         else
@@ -173,14 +107,14 @@ static esp_err_t hwss_hsl_w5100s_send_arp(hwss_hsl_t *hsl){
     }
 
     slcr=W5100S_SLCMD_ARP;
-    ESP_GOTO_ON_ERROR(W5100S_setSLCR(hsl->io,&slcr),err,TAG,"cannot write SLCR");
+    ESP_GOTO_ON_ERROR(W5100S_setSLCR(hsl_w5100s->io,&slcr),err,TAG,"cannot write SLCR");
 
 err:
     return ret;
 }
 
 
-hwss_hsl_t *hwss_hsl_new_w5100s(esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_hsl_config_t *config){
+hwss_hsl_t *hwss_hsl_new_w5100s(hwss_io_t *io, const hwss_hsl_config_t *config){
     hwss_hsl_t *ret=NULL;
     hwss_hsl_w5100_t *hsl=NULL;
 
@@ -190,12 +124,8 @@ hwss_hsl_t *hwss_hsl_new_w5100s(esp_event_loop_handle_t elp_hdl, hwss_io_t *io, 
     hsl=calloc(1,sizeof(hwss_hsl_w5100_t));
     ESP_GOTO_ON_FALSE(hsl,NULL,err,TAG,"calloc hsl failed!");
 
-    hsl->super.io=io;
-    hsl->super.elp_hdl=elp_hdl;
     hsl->super.init=hwss_hsl_w5100s_init;
     hsl->super.deinit=hwss_hsl_w5100s_deinit;
-    hsl->super.start=hwss_hsl_w5100s_start;
-    hsl->super.stop=hwss_hsl_w5100s_stop;
     hsl->super.set_peer_addr=hwss_hsl_w5100s_set_peer_addr;
     hsl->super.get_peer_addr=hwss_hsl_w5100s_get_peer_addr;
     hsl->super.get_peer_mac_addr=hwss_hsl_w5100s_get_peer_mac_addr;
@@ -206,18 +136,9 @@ hwss_hsl_t *hwss_hsl_new_w5100s(esp_event_loop_handle_t elp_hdl, hwss_io_t *io, 
     hsl->super.send_ping=hwss_hsl_w5100s_send_ping;
     hsl->super.send_arp=hwss_hsl_w5100s_send_arp;
 
+    hsl->io=io;
     hsl->retry_time_tick=config->retry_time_ms*10;
     hsl->retry_cnt=config->retry_cnt;
-    hsl->check_state_period_ms=config->check_state_period_ms;
-    hsl->is_started=false;
-
-    esp_timer_create_args_t timer_arg={
-        .name="hwss_hsl_w5500_check_state_timer",
-        .callback=hwss_hsl_w5100s_check_state_timer_cb,
-        .arg=hsl,
-        .skip_unhandled_events=true
-    };
-    ESP_GOTO_ON_FALSE(esp_timer_create(&timer_arg,&hsl->check_state_timer)==ESP_OK,NULL,err,TAG,"create check state timer failed");
 
     return &hsl->super;
 err:

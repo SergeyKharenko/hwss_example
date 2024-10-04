@@ -6,8 +6,6 @@ extern "C" {
 
 #include <stdint.h>
 
-//WIZNET OUI: 00:08:DC
-
 #define W5500_SOCKNUM                   8
 #define W5500_SOCK_CACHE_SIZE_KB        16
 

@@ -4,14 +4,17 @@
 extern "C" {
 #endif
 
+#define W5100S_SOCKNUM                  4
+#define W5100S_SOCK_CACHE_SIZE_KB       8
+
 #define _W5100S_SPI_READ_               (0x0F)
 #define _W5100S_SPI_WRITE_              (0xF0)
 
 #define _W5100S_IO_BASE_    			(0x0000)
 #define _W5100S_SN_BASE_  				(0x0400)
 #define _W5100S_SN_SIZE_  				(0x0100)
-#define _W5100S_IO_TXBUF_ 				(0x4000) /* Internal Tx buffer address of the iinchip */
-#define _W5100S_IO_RXBUF_ 				(0x6000) /* Internal Rx buffer address of the iinchip */
+#define _W5100S_IO_TXBUF_ 				(0x4000) /* Internal Tx buffer address of the chip */
+#define _W5100S_IO_RXBUF_ 				(0x6000) /* Internal Rx buffer address of the chip */
 
 #define W5100S_CREG_BLOCK      	      	0x00   ///< Common register block
 #define W5100S_SREG_BLOCK(N)    	   	(_W5100S_SN_BASE_+ _W5100S_SN_SIZE_*N) ///< Socket N register block
@@ -1478,34 +1481,6 @@ connection.
 //Basic mode status register, basic register
 #define W5100S_REG_PHYMDIO_BMSR				0x01
 
-//--------------------------------------Not used-------------------------------------------//
-////PHY identifier register 1, extended register
-//#define PHY_IDR1				0x02	//not used
-//
-////PHY identifier register 2, extended register
-//#define PHY_IDR2				0x03	//not used
-//
-////Auto-negotiation advertisement register, extended register
-//#define PHY_ANAR				0x04	//not used
-//
-////Auto-negotiation link partner ability register, extended register
-//#define PHY_ANLPAR				0x05	//not used
-//
-////Auto-negotiation expansion register, extended register
-//#define PHY_ANER				0x06	//not used
-//
-////Auto-negotiation next page transmit
-//#define PHY_ANNP				0x07	//not used
-//
-////Auto-negotiation link partner of the next page receive
-//#define PHY_ANLPNP				0x08	//not used
-//
-////MMD access control register
-//#define PHY_REGCR				0x09	//not used
-//
-////MMD access address data register
-//#define PHY_ADDAR				0x0e	//not used
-//--------------------------------------Not used-------------------------------------------//
 
 /********************/
 /* Bit definitions  */
@@ -1528,43 +1503,6 @@ connection.
 #define W5100S_BMSR_LINK_STATUS			(1<<2)
 #define W5100S_BMSR_JAB_DETECT			(1<<1)
 #define W5100S_EXTENDED_CAPA			(1<<0)
-
-//--------------------------------------Not used-------------------------------------------//
-////For ANAR register
-//#define ANAR_NP					(1<<15)
-//#define ANAR_ACK				(1<<14)
-//#define ANAR_RF					(1<<13)
-//#define ANAR_ASM				(3<<10)
-//#define ANAR_T4					(1<<9)
-//#define ANAR_TX_FD				(1<<8)
-//#define ANAR_TX_HD				(1<<7)
-//#define ANAR_10_FD				(1<<6)
-//#define ANAR_10_HD				(1<<5)
-//#define ANAR_SELECTOR			(0x1F<<0)
-//
-////For ANAR register
-//#define ANLPAR_NP				(1<<15)
-//#define ANLPAR_ACK				(1<<14)
-//#define ANLPAR_RF				(1<<13)
-//#define ANLPAR_LP_DIR			(1<<11)
-//#define ANLPAR_PAUSE			(1<<10)
-//#define ANLPAR_T4				(1<<9)
-//#define ANLPAR_TX_FD			(1<<8)
-//#define ANLPAR_TX_HD			(1<<7)
-//#define ANLPAR_10_FD			(1<<6)
-//#define ANLPAR_10_HD			(1<<5)
-//#define ANLPAR_SELECTOR			(0x1F<<0)
-
-/**/
-/* MDIO register*/
-//PCS_CTL_1			|		PCS control 1 register
-//PCS_STS_1			|		PCS status 1 register
-//EEE_ABILITY  		|		EEE capability register
-//WAKE_ER_CNTR		|		EEE wake error counter
-//EEE_ADVR 			|		EEE Advertisement register
-//EEE_LPAR 			|		EEE link partner ability register
-
-//--------------------------------------Not used-------------------------------------------//
 
 /********************/
 /*Functions for PHY */

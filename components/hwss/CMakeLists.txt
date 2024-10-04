@@ -31,19 +31,24 @@ list(APPEND srcs
                 "eth/wiznet/w5500/hwss_hppe_w5500.c"
                 "eth/wiznet/w5500/hwss_hso_w5500.c"
                 "eth/wiznet/w5500/hwss_sscm_drv_w5500.c"
-
-                # "eth/wiznet/w5100s/hwss_io_w5100s.c"
-                # "eth/wiznet/w5100s/hwss_phy_w5100s.c"
-                # "eth/wiznet/w5100s/hwss_mac_w5100s.c"
-                # "eth/wiznet/w5100s/hwss_hsl_w5100s.c"
-                # "eth/wiznet/w5100s/hwss_hnet_w5100s.c"
-                # "eth/wiznet/w5100s/hwss_hso_w5100s.c"
+                
+                "eth/wiznet/w5100s/hwss_cctl_w5100s.c"
+                "eth/wiznet/w5100s/hwss_cvr_w5100s.c"
+                "eth/wiznet/w5100s/hwss_hsl_w5100s.c"
+                "eth/wiznet/w5100s/hwss_hnet_w5100s.c"
+                "eth/wiznet/w5100s/hwss_io_w5100s.c"
+                "eth/wiznet/w5100s/hwss_sir_w5100s.c"
+                "eth/wiznet/w5100s/hwss_mac_w5100s.c"
+                "eth/wiznet/w5100s/hwss_phy_w5100s.c"
+                "eth/wiznet/w5100s/hwss_hppe_w5100s.c"
+                "eth/wiznet/w5100s/hwss_hso_w5100s.c"
+                "eth/wiznet/w5100s/hwss_sscm_drv_w5100s.c"
 
                 "eth/wch/ch394/hwss_io_ch394.c"
                 )
 list(APPEND inc_dirs    "eth/wiznet" 
                         "eth/wiznet/w5500" 
-                        # "eth/wiznet/w5100s"
+                        "eth/wiznet/w5100s"
 
                         "eth/wch"
                         "eth/wch/ch394"

@@ -30,8 +30,8 @@ typedef struct{
     bool igmp_v2;
 }hwss_hso_wiznet_sockmode_opt_t;
 
-hwss_hso_t *hwss_hso_new_w5500(esp_event_loop_handle_t elp, hwss_io_t *io, hwss_hir_t* hir, const hwss_hso_config_t *config);
-hwss_hso_t *hwss_hso_new_w5100s(esp_event_loop_handle_t elp, hwss_io_t *io, hwss_hir_t* hir, const hwss_hso_config_t *config);
+hwss_hso_t *hwss_hso_new_w5500(hwss_io_t *io, hwss_hir_t* hir, const hwss_hso_config_t *config);
+hwss_hso_t *hwss_hso_new_w5100s(hwss_io_t *io, hwss_hir_t* hir, const hwss_hso_config_t *config);
 
 #ifdef __cplusplus
 }

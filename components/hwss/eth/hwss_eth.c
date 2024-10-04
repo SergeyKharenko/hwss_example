@@ -44,6 +44,7 @@ static void hwss_eth_phy_state_handler(void *arg, esp_event_base_t event_base,
             rbits=xEventGroupSetBits(eth_pro->global_egp,HWSS_PHY_EVENTBIT_CONNECTED);
             if(rbits&HWSS_PHY_EVENTBIT_CONNECTED)
                 xEventGroupClearBits(eth_pro->global_egp,HWSS_PHY_EVENTBIT_CONNECTED);
+
             break;
         
         case HWSS_PHY_EVENT_DISCONN:
@@ -182,9 +183,9 @@ hwss_eth_t *hwss_eth_new(const hwss_eth_config_t *config){
                         err,TAG,"fail to create hwss_phy");
     ESP_GOTO_ON_FALSE(eth_pro->super.mac=hwss_mac_new(config->sku,eth_pro->super.io,&config->mac),NULL,err,TAG,
                         "fail to create hwss_mac");
-    ESP_GOTO_ON_FALSE(eth_pro->super.hnet=hwss_hnet_new(config->sku,eth_pro->super.elp_hdl,eth_pro->super.io,&config->hnet),
+    ESP_GOTO_ON_FALSE(eth_pro->super.hnet=hwss_hnet_new(config->sku,eth_pro->super.io,&config->hnet),
                         NULL,err,TAG, "fail to create hwss_hnet");
-    ESP_GOTO_ON_FALSE(eth_pro->super.hso=hwss_hso_new(config->sku,eth_pro->super.elp_hdl,eth_pro->super.io,eth_pro->super.hir,
+    ESP_GOTO_ON_FALSE(eth_pro->super.hso=hwss_hso_new(config->sku,eth_pro->super.io,eth_pro->super.hir,
                         &config->hso), NULL,err,TAG, "fail to create hwss_hso");
 
     hwss_sscm_drv_t *sscm_drv=NULL;
@@ -199,6 +200,12 @@ hwss_eth_t *hwss_eth_new(const hwss_eth_config_t *config){
                             "fail to create hwss_hppe");
     else
         eth_pro->super.opt.hppe=NULL;
+
+    if(config->has_hsl)
+        ESP_GOTO_ON_FALSE(eth_pro->super.opt.hsl=hwss_hsl_new(config->sku,eth_pro->super.io,&config->hsl),NULL,err,TAG,
+                            "fail to create hwss_hsl");
+    else
+        eth_pro->super.opt.hsl=NULL;
 
     hwss_eth_gen_id++;
     return &eth_pro->super;
@@ -222,6 +229,9 @@ esp_err_t hwss_eth_init(hwss_eth_t *eth){
 
     if(eth->opt.hppe)
         ESP_GOTO_ON_ERROR(hwss_hppe_init(eth->opt.hppe),err,TAG,"fail to initialize hppe");
+    
+    if(eth->opt.hsl)
+        ESP_GOTO_ON_ERROR(hwss_hsl_init(eth->opt.hsl),err,TAG,"fail to initialize hsl");
 
     ESP_GOTO_ON_ERROR(hwss_cvr_self_test(eth->cvr),err,TAG,"fail to pass selftest");
 
@@ -602,6 +612,36 @@ esp_err_t hwss_eth_sock_recv(hwss_eth_t *eth, hwss_eth_sockid_t id, uint8_t *dat
     ESP_GOTO_ON_ERROR(hwss_hso_ctrl_sock(eth->hso,id,HWSS_HSO_SOCKCTRL_RECV),err,TAG,"fail to recv");
 
 err:
+    return ret;
+}
+
+esp_err_t hwss_eth_sock_recv_udp(hwss_eth_t *eth, hwss_eth_sockid_t id, hwss_eth_udp_header_t *header, uint8_t *data, bool *last_pack){
+    esp_err_t ret=ESP_OK;
+
+    uint16_t total_len=0;
+    ESP_GOTO_ON_ERROR(hwss_hso_get_rx_length(eth->hso,id,&total_len),err,TAG,"fail to get RX Length");
+    ESP_GOTO_ON_ERROR(hwss_hso_read_rx_buffer_with_header(eth->hso,id,HWSS_ETH_PACK_HEADER_UDP,(void *)header,
+                        data,&total_len),err,TAG,"fail to read RX Buffer");
+    ESP_GOTO_ON_ERROR(hwss_hso_ctrl_sock(eth->hso,id,HWSS_HSO_SOCKCTRL_RECV),err,TAG,"fail to recv");
+    *last_pack=(total_len==0);
+    return ESP_OK;
+err:
+    *last_pack=true;
+    return ret;
+}
+
+esp_err_t hwss_eth_sock_recv_macraw(hwss_eth_t *eth, hwss_eth_sockid_t id, hwss_eth_macraw_header_t *header,uint8_t *data, bool *last_pack){
+    esp_err_t ret=ESP_OK;
+
+    uint16_t total_len=0;
+    ESP_GOTO_ON_ERROR(hwss_hso_get_rx_length(eth->hso,id,&total_len),err,TAG,"fail to get RX Length");
+    ESP_GOTO_ON_ERROR(hwss_hso_read_rx_buffer_with_header(eth->hso,id,HWSS_ETH_PACK_HEADER_MACRAW,(void *)header,
+                        data,&total_len),err,TAG,"fail to read RX Buffer");
+    ESP_GOTO_ON_ERROR(hwss_hso_ctrl_sock(eth->hso,id,HWSS_HSO_SOCKCTRL_RECV),err,TAG,"fail to recv");
+    *last_pack=(total_len==0);
+    return ESP_OK;
+err:
+    *last_pack=true;
     return ret;
 }
 

@@ -402,6 +402,10 @@ static inline esp_err_t W5500_readSn_RXBUF(hwss_io_t *io, uint8_t sn, uint16_t a
     return io->read_mem(io,0,(uint32_t)(W5500_RXBUF_BLOCK(sn)<<3)+(addr<<8),data,len);
 }
 
+static inline esp_err_t W5500_readSn_RXBUF_with_cache(hwss_io_t *io, uint8_t sn, uint16_t addr, uint8_t *data, uint16_t len){
+    return io->read_buf(io,0,(uint32_t)(W5500_RXBUF_BLOCK(sn)<<3)+(addr<<8),data,len);
+}
+
 #ifdef __cplusplus
 }
 #endif

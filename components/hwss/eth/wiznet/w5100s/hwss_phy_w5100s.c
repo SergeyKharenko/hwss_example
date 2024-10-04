@@ -13,6 +13,10 @@ static const char *TAG = "w5100s.hwss_phy";
 
 typedef struct{
     hwss_phy_t super;
+
+    hwss_io_t *io;
+    esp_event_loop_handle_t elp_hdl;
+
     _Atomic hwss_link_t link;
     _Atomic hwss_speed_t speed;
     _Atomic hwss_duplex_t duplex;
@@ -22,8 +26,6 @@ typedef struct{
 
     uint32_t reset_timeout_ms;
     uint32_t autonego_timeout_ms;
-
-    bool is_started;
 }hwss_phy_w5100s_t;
 
 typedef union{
@@ -51,10 +53,12 @@ static void hwss_phy_w5100s_check_timer_cb(void *args){
     hwss_phy_w5100s_t *phy_w5100s=(hwss_phy_w5100s_t *)args;
     uint8_t stat=0;
 
-    if(W5100S_getPHYSR(phy_w5100s->super.io,&stat) !=ESP_OK){
+    if(W5100S_getPHYSR(phy_w5100s->io,&stat) !=ESP_OK){
         ESP_LOGE(TAG,"fail to read PHYSR");
         return;
     }
+
+    // ESP_LOGI(TAG,"PHYSR:%X",stat);
 
     hwss_link_t link_p=atomic_load(&(phy_w5100s->link));
     hwss_link_t link;
@@ -77,12 +81,12 @@ static void hwss_phy_w5100s_check_timer_cb(void *args){
 
     if(link!=link_p){
         if(link==HWSS_LINK_UP){
-            if(esp_event_post_to(phy_w5100s->super.elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_CONNECT,NULL,0,0)!= ESP_OK)
+            if(esp_event_post_to(phy_w5100s->elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_CONNECT,NULL,0,0)!= ESP_OK)
                 ESP_LOGE(TAG,"fail to post event");
             ESP_LOGD(TAG,"Connected");
         }
         else{
-            if(esp_event_post_to(phy_w5100s->super.elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_DISCONN,NULL,0,0)!= ESP_OK)
+            if(esp_event_post_to(phy_w5100s->elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_DISCONN,NULL,0,0)!= ESP_OK)
                 ESP_LOGE(TAG,"fail to post event");
             ESP_LOGD(TAG,"Disconnected");
         }
@@ -96,16 +100,16 @@ static esp_err_t hwss_phy_w5100s_reset(hwss_phy_t *phy){
 
     atomic_store(&(phy_w5100s->link),HWSS_LINK_DOWN);
 
-    ESP_GOTO_ON_ERROR(W5100S_getPHYCR1(phy->io,&phycr1.val),err,TAG,"fail to read PHYCR1");
-    ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,false),err,TAG,"fail to unlock PHY");
+    ESP_GOTO_ON_ERROR(W5100S_getPHYCR1(phy_w5100s->io,&phycr1.val),err,TAG,"fail to read PHYCR1");
+    ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy_w5100s->io,false),err,TAG,"fail to unlock PHY");
     phycr1.reset=1;
-    ESP_GOTO_ON_ERROR(W5100S_setPHYCR1(phy->io,&phycr1.val),err,TAG,"fail to write PHYCR1");
+    ESP_GOTO_ON_ERROR(W5100S_setPHYCR1(phy_w5100s->io,&phycr1.val),err,TAG,"fail to write PHYCR1");
     vTaskDelay(pdMS_TO_TICKS(1));
     phycr1.reset=0;
-    ESP_GOTO_ON_ERROR(W5100S_setPHYCR1(phy->io,&phycr1.val),err,TAG,"fail to write PHYCR1");
+    ESP_GOTO_ON_ERROR(W5100S_setPHYCR1(phy_w5100s->io,&phycr1.val),err,TAG,"fail to write PHYCR1");
     vTaskDelay(pdMS_TO_TICKS(phy_w5100s->reset_timeout_ms));
 
-    ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,true),err,TAG,"fail to lock PHY");
+    ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy_w5100s->io,true),err,TAG,"fail to lock PHY");
 
 err:
     return ret;
@@ -120,25 +124,25 @@ static esp_err_t hwss_phy_w5100s_init(hwss_phy_t *phy){
 
 static esp_err_t hwss_phy_w5100s_deinit(hwss_phy_t *phy){
     hwss_phy_w5100s_t *phy_w5100s=__containerof(phy,hwss_phy_w5100s_t,super);
-    if(!phy_w5100s->is_started)
+    if(!phy->is_started)
         return ESP_OK;
-    phy_w5100s->is_started=false;
+    phy->is_started=false;
     return esp_timer_stop(phy_w5100s->check_timer);
 }
 
 static esp_err_t hwss_phy_w5100s_start(hwss_phy_t *phy){
     hwss_phy_w5100s_t *phy_w5100s=__containerof(phy,hwss_phy_w5100s_t,super);
-    if(phy_w5100s->is_started)
+    if(phy->is_started)
         return ESP_OK;
-    phy_w5100s->is_started=true;
+    phy->is_started=true;
     return esp_timer_start_periodic(phy_w5100s->check_timer, phy_w5100s->check_period_ms*1000);
 }
 
 static esp_err_t hwss_phy_w5100s_stop(hwss_phy_t *phy){
     hwss_phy_w5100s_t *phy_w5100s=__containerof(phy,hwss_phy_w5100s_t,super);
-    if(!phy_w5100s->is_started)
+    if(!phy->is_started)
         return ESP_OK;
-    phy_w5100s->is_started=false;
+    phy->is_started=false;
     return esp_timer_stop(phy_w5100s->check_timer);
 }
 
@@ -148,7 +152,7 @@ static esp_err_t hwss_phy_w5100s_autonego_ctrl(hwss_phy_t *phy, hwss_phy_autoneg
     uint8_t stat;
     uint8_t mode;
 
-    ESP_GOTO_ON_ERROR(W5100S_getPHYSR(phy_w5100s->super.io,&stat),err,TAG,"fail to read PHYSR");
+    ESP_GOTO_ON_ERROR(W5100S_getPHYSR(phy_w5100s->io,&stat),err,TAG,"fail to read PHYSR");
 
     switch (cmd) {
     case HWSS_PHY_AUTONEGO_RESTART:
@@ -159,16 +163,16 @@ static esp_err_t hwss_phy_w5100s_autonego_ctrl(hwss_phy_t *phy, hwss_phy_autoneg
 
         atomic_store(&(phy_w5100s->link),HWSS_LINK_DOWN);
 
-        ESP_GOTO_ON_ERROR(W5100S_getPHYCR1(phy->io,&phycr1.val),err,TAG,"fail to read PHYCR1");
-        ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,false),err,TAG,"fail to unlock PHY");
+        ESP_GOTO_ON_ERROR(W5100S_getPHYCR1(phy_w5100s->io,&phycr1.val),err,TAG,"fail to read PHYCR1");
+        ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy_w5100s->io,false),err,TAG,"fail to unlock PHY");
         phycr1.reset=1;
-        ESP_GOTO_ON_ERROR(W5100S_setPHYCR1(phy->io,&phycr1.val),err,TAG,"fail to write PHYCR1");
+        ESP_GOTO_ON_ERROR(W5100S_setPHYCR1(phy_w5100s->io,&phycr1.val),err,TAG,"fail to write PHYCR1");
         vTaskDelay(pdMS_TO_TICKS(1));
         phycr1.reset=0;
-        ESP_GOTO_ON_ERROR(W5100S_setPHYCR1(phy->io,&phycr1.val),err,TAG,"fail to write PHYCR1");
+        ESP_GOTO_ON_ERROR(W5100S_setPHYCR1(phy_w5100s->io,&phycr1.val),err,TAG,"fail to write PHYCR1");
         vTaskDelay(pdMS_TO_TICKS(phy_w5100s->reset_timeout_ms));
 
-        ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,true),err,TAG,"fail to lock PHY");
+        ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy_w5100s->io,true),err,TAG,"fail to lock PHY");
         *autonego_en_stat = true;
         break;
 
@@ -185,17 +189,17 @@ static esp_err_t hwss_phy_w5100s_autonego_ctrl(hwss_phy_t *phy, hwss_phy_autoneg
         else
             mode|=W5100S_PHYCR_SPD_100;
 
-        ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,false),err,TAG,"fail to unlock PHY");
-        ESP_GOTO_ON_ERROR(W5100S_setPHYCR0(phy->io,&mode),err,TAG,"fail to write PHYCR0");
-        ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,true),err,TAG,"fail to lock PHY");
+        ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy_w5100s->io,false),err,TAG,"fail to unlock PHY");
+        ESP_GOTO_ON_ERROR(W5100S_setPHYCR0(phy_w5100s->io,&mode),err,TAG,"fail to write PHYCR0");
+        ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy_w5100s->io,true),err,TAG,"fail to lock PHY");
         *autonego_en_stat = false;
         break;
 
     case HWSS_PHY_AUTONEGO_EN:
         mode=W5100S_PHYCR_AUTONEGO_ENABLE;
-        ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,false),err,TAG,"fail to unlock PHY");
-        ESP_GOTO_ON_ERROR(W5100S_setPHYCR0(phy->io,&mode),err,TAG,"fail to write PHYCR0");
-        ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,true),err,TAG,"fail to lock PHY");
+        ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy_w5100s->io,false),err,TAG,"fail to unlock PHY");
+        ESP_GOTO_ON_ERROR(W5100S_setPHYCR0(phy_w5100s->io,&mode),err,TAG,"fail to write PHYCR0");
+        ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy_w5100s->io,true),err,TAG,"fail to lock PHY");
         *autonego_en_stat = true;
         break;
 
@@ -219,10 +223,10 @@ static esp_err_t hwss_phy_w5100s_set_link(hwss_phy_t *phy, hwss_link_t link){
     if(link!=link_p){
         atomic_store(&(phy_w5100s->link),link);
         if(link==HWSS_LINK_UP)
-            ESP_GOTO_ON_ERROR(esp_event_post_to(phy_w5100s->super.elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_CONNECT,NULL,0,0),
+            ESP_GOTO_ON_ERROR(esp_event_post_to(phy_w5100s->elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_CONNECT,NULL,0,0),
                             err,TAG,"fail to post event");
         else
-            ESP_GOTO_ON_ERROR(esp_event_post_to(phy_w5100s->super.elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_DISCONN,NULL,0,0),
+            ESP_GOTO_ON_ERROR(esp_event_post_to(phy_w5100s->elp_hdl,HWSS_PHY_EVENT,HWSS_PHY_EVENT_DISCONN,NULL,0,0),
                             err,TAG,"fail to post event");
     }
 
@@ -245,7 +249,7 @@ static esp_err_t hwss_phy_w5100s_set_speed(hwss_phy_t *phy, hwss_speed_t speed){
 
     atomic_store(&(phy_w5100s->link),HWSS_LINK_DOWN);
 
-    ESP_GOTO_ON_ERROR(W5100S_getPHYSR(phy_w5100s->super.io,&stat),err,TAG,"fail to read PHYSR");
+    ESP_GOTO_ON_ERROR(W5100S_getPHYSR(phy_w5100s->io,&stat),err,TAG,"fail to read PHYSR");
     
     if(speed==HWSS_SPEED_10M)
         mode|=W5100S_PHYCR_SPD_10;
@@ -257,9 +261,9 @@ static esp_err_t hwss_phy_w5100s_set_speed(hwss_phy_t *phy, hwss_speed_t speed){
     else
         mode|=W5100S_PHYCR_FULL_DUP;
 
-    ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,false),err,TAG,"fail to unlock PHY");
-    ESP_GOTO_ON_ERROR(W5100S_setPHYCR0(phy->io,&mode),err,TAG,"fail to write PHYCR0");
-    ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,true),err,TAG,"fail to lock PHY");
+    ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy_w5100s->io,false),err,TAG,"fail to unlock PHY");
+    ESP_GOTO_ON_ERROR(W5100S_setPHYCR0(phy_w5100s->io,&mode),err,TAG,"fail to write PHYCR0");
+    ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy_w5100s->io,true),err,TAG,"fail to lock PHY");
 
     atomic_store(&(phy_w5100s->speed),speed);
 err:
@@ -281,7 +285,7 @@ static esp_err_t hwss_phy_w5100s_set_duplex(hwss_phy_t *phy, hwss_duplex_t duple
 
     atomic_store(&(phy_w5100s->link),HWSS_LINK_DOWN);
 
-    ESP_GOTO_ON_ERROR(W5100S_getPHYSR(phy_w5100s->super.io,&stat),err,TAG,"fail to read PHYSR");
+    ESP_GOTO_ON_ERROR(W5100S_getPHYSR(phy_w5100s->io,&stat),err,TAG,"fail to read PHYSR");
     
     if(duplex==HWSS_DUPLEX_FULL)
         mode|=W5100S_PHYCR_FULL_DUP;
@@ -293,9 +297,9 @@ static esp_err_t hwss_phy_w5100s_set_duplex(hwss_phy_t *phy, hwss_duplex_t duple
     else
         mode|=W5100S_PHYCR_SPD_100;
 
-    ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,false),err,TAG,"fail to unlock PHY");
-    ESP_GOTO_ON_ERROR(W5100S_setPHYCR0(phy->io,&mode),err,TAG,"fail to write PHYCR0");
-    ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy->io,true),err,TAG,"fail to lock PHY");
+    ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy_w5100s->io,false),err,TAG,"fail to unlock PHY");
+    ESP_GOTO_ON_ERROR(W5100S_setPHYCR0(phy_w5100s->io,&mode),err,TAG,"fail to write PHYCR0");
+    ESP_GOTO_ON_ERROR(W5100S_setPHYLOCK(phy_w5100s->io,true),err,TAG,"fail to lock PHY");
 
     atomic_store(&(phy_w5100s->duplex),duplex);
 err:
@@ -325,8 +329,7 @@ hwss_phy_t *hwss_phy_new_w5100s(esp_event_loop_handle_t elp_hdl, hwss_io_t *io, 
     if(phy_config->check_period_ms<5)
         ESP_LOGW(TAG,"check period too short might SERIOUSLY affects the execution of other tasks!");
     
-    phy->super.io=io;
-    phy->super.elp_hdl=elp_hdl;
+    phy->super.is_started=false;
     phy->super.reset=hwss_phy_w5100s_reset;
     phy->super.init=hwss_phy_w5100s_init;
     phy->super.deinit=hwss_phy_w5100s_deinit;
@@ -340,9 +343,10 @@ hwss_phy_t *hwss_phy_new_w5100s(esp_event_loop_handle_t elp_hdl, hwss_io_t *io, 
     phy->super.set_duplex=hwss_phy_w5100s_set_duplex;
     phy->super.get_duplex=hwss_phy_w5100s_get_duplex;
 
+    phy->io=io;
+    phy->elp_hdl=elp_hdl;
     phy->check_period_ms=phy_config->check_period_ms;
     phy->reset_timeout_ms=phy_config->reset_timeout_ms;
-    phy->is_started=false;
 
     esp_timer_create_args_t timer_arg={
         .name="hwss_phy_w5100s_check_timer",

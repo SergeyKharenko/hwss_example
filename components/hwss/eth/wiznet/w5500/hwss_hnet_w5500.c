@@ -139,7 +139,7 @@ err:
     return ret;
 }
 
-hwss_hnet_t *hwss_hnet_new_w5500(esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_hnet_config_t *config){
+hwss_hnet_t *hwss_hnet_new_w5500(hwss_io_t *io, const hwss_hnet_config_t *config){
     hwss_hnet_t *ret=NULL;
     hwss_hnet_w5500_t* hnet=NULL;
 

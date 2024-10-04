@@ -5,11 +5,13 @@
 
 typedef enum{
     HWSS_IO_SPI =           0x00,
-    HWSS_IO_SPI_PRO =       0x01,           // For CH395 only 
+    HWSS_IO_SPI_PRO =       0x01,
+    
     HWSS_IO_PARALLEL_8 =    0x02,
     HWSS_IO_PARALLEL_16 =   0x03,
     HWSS_IO_FAST_PARALLEL_8 =   0x04,
     HWSS_IO_FAST_PARALLEL_16 =  0x05,
+
     HWSS_IO_UART =          0x06,
 
     HWSS_IO_TYPE_END =      0xFF
@@ -73,6 +75,24 @@ typedef uint16_t (hwss_eth_ip6_addr_t)[HWSS_ETH_IP6_ADDR_LEN];
 
 typedef uint8_t                         hwss_eth_sockid_t;
 typedef uint16_t                        hwss_eth_port_t;
+
+typedef enum{
+    HWSS_ETH_PACK_HEADER_UDP,
+    HWSS_ETH_PACK_HEADER_MACRAW,
+}hwss_eth_pack_header_t;
+
+typedef struct{
+    hwss_eth_ip4_addr_t     addr;
+    hwss_eth_port_t         port;
+    uint16_t                len;
+}hwss_eth_udp_header_t;
+
+typedef struct{
+    hwss_eth_mac_addr_t     s_addr;
+    hwss_eth_mac_addr_t     d_addr;
+    uint16_t                len;
+    uint16_t                type;
+}hwss_eth_macraw_header_t;
 
 typedef enum{
     HWSS_SOCKACT_ACTIVE,

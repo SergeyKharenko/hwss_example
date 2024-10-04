@@ -90,4 +90,4 @@ static inline esp_err_t hwss_hnet_get_unreachable_port(hwss_hnet_t *hnet, hwss_e
     return hnet->get_unreachable_port(hnet,port);
 }
 
-hwss_hnet_t *hwss_hnet_new(hwss_eth_sku_t sku,esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_hnet_config_t *config);
+hwss_hnet_t *hwss_hnet_new(hwss_eth_sku_t sku, hwss_io_t *io, const hwss_hnet_config_t *config);

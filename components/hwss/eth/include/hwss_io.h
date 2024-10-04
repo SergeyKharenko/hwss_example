@@ -34,6 +34,8 @@ typedef struct{
     uint32_t            speed_khz;
 } hwss_io_spi_config_t;
 
+typedef hwss_io_spi_config_t hwss_io_spi_pro_config_t;
+
 typedef struct{
     uint8_t             io_width;
     gpio_num_t          io_nums[16];

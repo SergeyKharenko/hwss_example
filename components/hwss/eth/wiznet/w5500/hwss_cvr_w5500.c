@@ -31,7 +31,7 @@ static esp_err_t hwss_cvr_w5500_self_test(hwss_cvr_t* cvr){
     ESP_GOTO_ON_ERROR(W5500_getVERSIONR(cvr_w5500->io,&ver),err,TAG,"cannot read VERSIONR");
     
     if(ver!=0x04){
-        ESP_LOGE(TAG,"actual Chip Version is %X, should be 0x04 instead",ver);
+        ESP_LOGE(TAG,"actual Chip Version is 0x%X, should be 0x04 instead",ver);
         ret=ESP_FAIL;
     }
 

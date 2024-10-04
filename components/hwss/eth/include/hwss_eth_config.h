@@ -1,5 +1,6 @@
 #pragma once
 #include <string.h>
+#include "esp_task.h"
 #include "hwss_eth_sku.h"
 #include "hwss_opt.h"
 #include "hwss_io.h"
@@ -55,7 +56,7 @@ static inline hwss_eth_config_t HWSS_ETH_W5500_DEFAULT_CONFIG(hwss_io_type_t typ
             .queue_size=16,     
             .task_core_id=tskNO_AFFINITY,
             .task_name="HWSS ETH LOOP", 
-            .task_priority=10,          
+            .task_priority=ESP_TASK_PRIO_MAX-5,          
             .task_stack_size=4096       
         },
         .cctl={
@@ -106,10 +107,78 @@ static inline hwss_eth_config_t HWSS_ETH_W5500_DEFAULT_CONFIG(hwss_io_type_t typ
             .en_socknum=1,
         },
         .sscm={
-            .sock_active_threshold_ms=1000,
             .sock_polling_period_ms=5,
             .en_socknum=1,
-            .policy=HWSS_SSCM_POLICY_INTR_WAKEUP_POLLING,
+            .policy=HWSS_SSCM_POLICY_INTR_ONLY,
+        },
+        .has_hppe=true,
+        .hppe={
+            .cp_magic_num=0,        
+            .cp_request_time_ms=1000
+        },                      
+        .has_hsl=false,                            
+        .has_hdc=false
+    };
+    return res;
+}
+
+static inline hwss_eth_config_t HWSS_ETH_W5100S_DEFAULT_CONFIG(hwss_io_type_t type, void *io_config, gpio_num_t ir, gpio_num_t rst){
+    hwss_eth_config_t res={
+        .sku=HWSS_ETH_SKU_W5100S,
+        .en_socknum=1,
+        .io_type=type,
+        .io_config=io_config, 
+        .elp_args={             
+            .queue_size=16,     
+            .task_core_id=tskNO_AFFINITY,
+            .task_name="HWSS ETH LOOP", 
+            .task_priority=ESP_TASK_PRIO_MAX-5,          
+            .task_stack_size=4096       
+        },
+        .cctl={
+            .hw_rst_ms=100,
+            .rst_ionum=rst,
+        },                      
+        .hir={                  
+            .io_num=ir,   
+            .tri=HWSS_TRIGGER_NEGEDGE   
+        },
+        .sir={
+            .check_state_period_ms=10,
+        },                      
+        .phy={                  
+            .check_period_ms=10,        
+            .reset_timeout_ms=500       
+        },                      
+        .mac={                  
+            .use_burnin_addr=false,
+            .addr[0]=0x00,
+            .addr[1]=0x08,
+            .addr[2]=0xDC,
+            .addr[3]=0x04,
+            .addr[4]=0x02,
+            .addr[5]=0x05,
+        },                      
+        .hnet={
+            .retry_cnt=8,               
+            .retry_time_ms=200
+        },                      
+        .hso={                       
+            .tx_buffsize_kb[0]=8,
+            .tx_buffsize_kb[1]=0,
+            .tx_buffsize_kb[2]=0,
+            .tx_buffsize_kb[3]=0,
+            .rx_buffsize_kb[0]=8,
+            .rx_buffsize_kb[1]=0,
+            .rx_buffsize_kb[2]=0,
+            .rx_buffsize_kb[3]=0,
+            .en_socknum=1,
+        },
+        .sscm={
+            .sock_active_threshold_ms=1000,
+            .sock_polling_period_ms=1,
+            .en_socknum=1,
+            .policy=HWSS_SSCM_POLICY_INTR_ONLY,
         },
         .has_hppe=true,
         .hppe={
@@ -119,8 +188,7 @@ static inline hwss_eth_config_t HWSS_ETH_W5500_DEFAULT_CONFIG(hwss_io_type_t typ
         .has_hsl=true,          
         .hsl={                  
             .retry_cnt=3,       
-            .retry_time_ms=100, 
-            .check_state_period_ms=10   
+            .retry_time_ms=100,
         },                      
         .has_hdc=false
     };

@@ -7,5 +7,5 @@
 
 #define HWSS_ETH_NAMELEN_MAX                        16
 
-#define HWSS_IO_CACHE_SIZE                          8
+#define HWSS_IO_CACHE_SIZE                          16
 #define HWSS_IO_LOCK_TIMEOUT_MS                     20

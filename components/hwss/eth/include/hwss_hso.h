@@ -49,6 +49,8 @@ struct hwss_hso_s{
 
     esp_err_t (*write_tx_buffer)(hwss_hso_t *hso, hwss_eth_sockid_t id, const uint8_t *data, uint16_t len);
     esp_err_t (*read_rx_buffer)(hwss_hso_t *hso, hwss_eth_sockid_t id, uint8_t *data, uint16_t len);
+    esp_err_t (*read_rx_buffer_with_header)(hwss_hso_t *hso, hwss_eth_sockid_t id, hwss_eth_pack_header_t htype, 
+                                            void *header, uint8_t *data, uint16_t *len);
     esp_err_t (*drop_rx_buffer)(hwss_hso_t *hso, hwss_eth_sockid_t id);
     
     esp_err_t (*get_tx_free_length)(hwss_hso_t *hso, hwss_eth_sockid_t id, uint16_t *len);
@@ -97,6 +99,11 @@ static inline esp_err_t hwss_hso_write_tx_buffer(hwss_hso_t *hso, hwss_eth_socki
 
 static inline esp_err_t hwss_hso_read_rx_buffer(hwss_hso_t *hso, hwss_eth_sockid_t id, uint8_t *data, uint16_t len){
     return hso->read_rx_buffer(hso,id,data,len);
+}
+
+static inline esp_err_t hwss_hso_read_rx_buffer_with_header(hwss_hso_t *hso, hwss_eth_sockid_t id, hwss_eth_pack_header_t htype, 
+                                        void *header, uint8_t *data, uint16_t *len){
+    return hso->read_rx_buffer_with_header(hso,id,htype,header,data,len);
 }
 
 static inline esp_err_t hwss_hso_drop_rx_buffer(hwss_hso_t *hso, hwss_eth_sockid_t id){
@@ -175,4 +182,4 @@ static inline esp_err_t hwss_hso_get_sock_state_raw(hwss_hso_t *hso, hwss_eth_so
     return hso->get_sock_state_raw(hso,id,sta);
 }
 
-hwss_hso_t *hwss_hso_new(hwss_eth_sku_t sku, esp_event_loop_handle_t elp, hwss_io_t *io, hwss_hir_t* hir, const hwss_hso_config_t *config);
+hwss_hso_t *hwss_hso_new(hwss_eth_sku_t sku, hwss_io_t *io, hwss_hir_t* hir, const hwss_hso_config_t *config);

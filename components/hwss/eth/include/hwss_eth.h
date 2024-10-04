@@ -64,4 +64,6 @@ esp_err_t hwss_eth_sock_send(hwss_eth_t *eth, hwss_eth_sockid_t id, const uint8_
 esp_err_t hwss_eth_sock_send_wait_finish(hwss_eth_t *eth, hwss_eth_sockid_t id);
 esp_err_t hwss_eth_sock_recv_pending(hwss_eth_t *eth, hwss_eth_sockid_t id);
 esp_err_t hwss_eth_sock_recv(hwss_eth_t *eth, hwss_eth_sockid_t id, uint8_t *data, uint16_t *len);
+esp_err_t hwss_eth_sock_recv_udp(hwss_eth_t *eth, hwss_eth_sockid_t id, hwss_eth_udp_header_t *header, uint8_t *data, bool *last_pack);
+esp_err_t hwss_eth_sock_recv_macraw(hwss_eth_t *eth, hwss_eth_sockid_t id, hwss_eth_macraw_header_t *header,uint8_t *data, bool *last_pack);
 esp_err_t hwss_eth_sock_recv_drop(hwss_eth_t *eth, hwss_eth_sockid_t id);

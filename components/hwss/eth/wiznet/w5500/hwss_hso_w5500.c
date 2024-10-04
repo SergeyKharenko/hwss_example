@@ -7,6 +7,18 @@
 #include "drv_w5500.h"
 #include "hwss_hso_wiznet.h"
 
+#define W5500_UDP_HEADER_LEN                                   8
+#define W5500_MACRAW_HEADER_LEN                                16
+
+#define W5500_UDP_HEADER_ADDR_BIAS                             0
+#define W5500_UDP_HEADER_PORT_BIAS                             W5500_UDP_HEADER_ADDR_BIAS+HWSS_ETH_IP4_ADDR_LEN
+#define W5500_UDP_HEADER_LEN_BIAS                              W5500_UDP_HEADER_PORT_BIAS+sizeof(hwss_eth_port_t)
+
+#define W5500_MACRAW_HEADER_LEN_BIAS                           0
+#define W5500_MACRAW_HEADER_DADDR_BIAS                         W5500_MACRAW_HEADER_LEN_BIAS+sizeof(uint16_t)
+#define W5500_MACRAW_HEADER_SADDR_BIAS                         W5500_MACRAW_HEADER_DADDR_BIAS+HWSS_ETH_MAC_ADDR_LEN
+#define W5500_MACRAW_HEADER_TYPE_BIAS                          W5500_MACRAW_HEADER_SADDR_BIAS+HWSS_ETH_MAC_ADDR_LEN
+
 static const uint8_t    w5500_sock_mode_default=            W5500_Sn_MR_CLOSE;
 static const uint16_t   w5500_sock_port_defualt=            0x0000;
 static const uint8_t    w5500_sock_dest_mac_addr_default[]= {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
@@ -151,13 +163,72 @@ err:
     return ret;
 }
 
+static esp_err_t hwss_hso_w5500_read_rx_buffer_with_header(hwss_hso_t *hso, hwss_eth_sockid_t id, 
+                                    hwss_eth_pack_header_t htype, void *header, uint8_t *data, uint16_t *len){
+    esp_err_t ret=ESP_OK;
+    hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
+
+    if(*len==0)
+        return ret;
+
+    uint8_t     hlen=0;
+    uint16_t    dlen=0;
+    switch(htype){
+        case HWSS_ETH_PACK_HEADER_UDP: hlen=W5500_UDP_HEADER_LEN;break;
+        case HWSS_ETH_PACK_HEADER_MACRAW: hlen=W5500_MACRAW_HEADER_LEN;break;
+        default: return ESP_ERR_INVALID_ARG;
+    }
+
+    ESP_GOTO_ON_FALSE(*len>=hlen,ESP_ERR_INVALID_SIZE,err,TAG,"corrupted pack detected");
+
+    uint8_t     cache[W5500_MACRAW_HEADER_LEN];
+    uint16_t    rxrd=0;
+    ESP_GOTO_ON_ERROR(W5500_getSn_RX_RD(hso_w5500->io,id,&rxrd),err,TAG,"cannot read Sn_RX_RD");
+
+    ESP_GOTO_ON_ERROR(W5500_readSn_RXBUF_with_cache(hso_w5500->io,id,rxrd,cache,hlen),err,TAG,"cannot read Sn_RXBUF");
+    *len-=hlen;
+    rxrd+=hlen;
+    switch(htype){
+        case HWSS_ETH_PACK_HEADER_UDP:{
+            hwss_eth_udp_header_t *udp_header=(hwss_eth_udp_header_t *)header;
+            memcpy(udp_header->addr,cache+W5500_UDP_HEADER_ADDR_BIAS,HWSS_ETH_IP4_ADDR_LEN);
+            memcpy(&udp_header->port,cache+W5500_UDP_HEADER_PORT_BIAS,sizeof(hwss_eth_port_t));
+            memcpy(&udp_header->len,cache+W5500_UDP_HEADER_LEN_BIAS,sizeof(uint16_t));
+            udp_header->port=hwss_eth_ntohs(udp_header->port);
+            udp_header->len=hwss_eth_ntohs(udp_header->len);
+            dlen=udp_header->len;
+            break;
+        }
+        case HWSS_ETH_PACK_HEADER_MACRAW: {
+            hwss_eth_macraw_header_t *macraw_header=(hwss_eth_macraw_header_t *)header;
+            memcpy(&macraw_header->len,cache+W5500_MACRAW_HEADER_LEN_BIAS,sizeof(uint16_t));
+            memcpy(macraw_header->d_addr,cache+W5500_MACRAW_HEADER_DADDR_BIAS,HWSS_ETH_MAC_ADDR_LEN);
+            memcpy(macraw_header->s_addr,cache+W5500_MACRAW_HEADER_SADDR_BIAS,HWSS_ETH_MAC_ADDR_LEN);
+            memcpy(&macraw_header->type,cache+W5500_MACRAW_HEADER_TYPE_BIAS,sizeof(uint16_t));
+            macraw_header->len=hwss_eth_ntohs(macraw_header->len);
+            macraw_header->type=hwss_eth_ntohs(macraw_header->type);
+            dlen=macraw_header->len;
+            break;
+        }
+        default: return ESP_ERR_INVALID_ARG;
+    }
+    
+    ESP_GOTO_ON_FALSE(*len>=dlen,ESP_ERR_INVALID_SIZE,err,TAG,"corrupted pack detected");
+    ESP_GOTO_ON_ERROR(W5500_readSn_RXBUF(hso_w5500->io,id,rxrd,data,dlen),err,TAG,"cannot read Sn_RXBUF");
+    *len-=dlen;
+    rxrd+=dlen;
+    ESP_GOTO_ON_ERROR(W5500_setSn_RX_RD(hso_w5500->io,id,&rxrd),err,TAG,"cannot update Sn_RX_RD");
+err:
+    return ret;
+}
+
 static esp_err_t hwss_hso_w5500_drop_rx_buffer(hwss_hso_t *hso, hwss_eth_sockid_t id){
     esp_err_t ret=ESP_OK;
     hwss_hso_w5500_t *hso_w5500=__containerof(hso,hwss_hso_w5500_t,super);
     
-    uint16_t rxrd=0;
-    ESP_GOTO_ON_ERROR(W5500_getSn_RX_WR(hso_w5500->io,id,&rxrd),err,TAG,"cannot read Sn_RX_WR");
-    ESP_GOTO_ON_ERROR(W5500_setSn_RX_RD(hso_w5500->io,id,&rxrd),err,TAG,"cannot update Sn_RX_RD");
+    uint16_t rxp=0;
+    ESP_GOTO_ON_ERROR(W5500_getSn_RX_WR(hso_w5500->io,id,&rxp),err,TAG,"cannot read Sn_RX_WR");
+    ESP_GOTO_ON_ERROR(W5500_setSn_RX_RD(hso_w5500->io,id,&rxp),err,TAG,"cannot update Sn_RX_RD");
 err:
     return ret;
 }
@@ -412,7 +483,7 @@ err:
     return ret;
 }
 
-hwss_hso_t *hwss_hso_new_w5500(esp_event_loop_handle_t elp, hwss_io_t *io, hwss_hir_t* hir, const hwss_hso_config_t *config){
+hwss_hso_t *hwss_hso_new_w5500(hwss_io_t *io, hwss_hir_t* hir, const hwss_hso_config_t *config){
     hwss_hso_t *ret=NULL;
     hwss_hso_w5500_t* hso=NULL;
 
@@ -440,6 +511,7 @@ hwss_hso_t *hwss_hso_new_w5500(esp_event_loop_handle_t elp, hwss_io_t *io, hwss_
     hso->super.ctrl_sock=hwss_hso_w5500_ctrl_sock;
     hso->super.write_tx_buffer=hwss_hso_w5500_write_tx_buffer;
     hso->super.read_rx_buffer=hwss_hso_w5500_read_rx_buffer;
+    hso->super.read_rx_buffer_with_header=hwss_hso_w5500_read_rx_buffer_with_header;
     hso->super.drop_rx_buffer=hwss_hso_w5500_drop_rx_buffer;
     hso->super.get_rx_length=hwss_hso_w5500_get_rx_length;
     hso->super.get_tx_free_length=hwss_hso_w5500_get_tx_free_length;

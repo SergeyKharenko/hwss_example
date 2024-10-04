@@ -154,10 +154,18 @@ esp_err_t hwss_sscm_start(hwss_sscm_t *sscm){
                 ESP_GOTO_ON_ERROR(sscm_drv->clear_sock_intr(sscm_drv,id),err,TAG,"cannot clear sock%u intr",id);
                 ESP_GOTO_ON_ERROR(sscm_drv->set_sock_intr_enable(sscm_drv,id,true),err,TAG,"cannot enable sock%u intr",id);
             };
-            sscm_pro->active_sock_num=0;
-
             ESP_GOTO_ON_ERROR(esp_timer_start_periodic(sscm_pro->sock_polling_timer,sscm_pro->sock_polling_period_ms*1000),err,TAG,
                                 "cannot start sock polling timer");
+        break;
+
+        case HWSS_SSCM_POLICY_INTR_ONLY:
+            ESP_GOTO_ON_ERROR(sscm_drv->set_sock_global_intr_enable_all(sscm_drv,false),err,TAG,"fail to disable global socket intr");
+            for(hwss_eth_sockid_t id=0;id<sscm_pro->en_socknum;id++){
+                sscm_pro->sockact_sta_list[id]=HWSS_SOCKACT_GENERIC;
+                ESP_GOTO_ON_ERROR(sscm_drv->clear_sock_intr(sscm_drv,id),err,TAG,"cannot clear sock%u intr",id);
+                ESP_GOTO_ON_ERROR(sscm_drv->set_sock_intr_enable(sscm_drv,id,true),err,TAG,"cannot enable sock%u intr",id);
+            };
+            ESP_GOTO_ON_ERROR(sscm_drv->set_sock_global_intr_enable_all(sscm_drv,true),err,TAG,"fail to enable global socket intr");
         break;
 
         case HWSS_SSCM_POLICY_INTR_WAKEUP_POLLING:
@@ -167,13 +175,13 @@ esp_err_t hwss_sscm_start(hwss_sscm_t *sscm){
                 ESP_GOTO_ON_ERROR(sscm_drv->clear_sock_intr(sscm_drv,id),err,TAG,"cannot clear sock%u intr",id);
                 ESP_GOTO_ON_ERROR(sscm_drv->set_sock_intr_enable(sscm_drv,id,true),err,TAG,"cannot enable sock%u intr",id);
             };
-            sscm_pro->active_sock_num=0;
             ESP_GOTO_ON_ERROR(sscm_drv->set_sock_global_intr_enable_all(sscm_drv,true),err,TAG,"fail to enable global socket intr");
         break;
 
         default: return ESP_ERR_NOT_SUPPORTED;
     }
 
+    sscm_pro->active_sock_num=0;
     sscm->is_started=true;
 err:
     return ret;
@@ -189,6 +197,8 @@ esp_err_t hwss_sscm_stop(hwss_sscm_t *sscm){
         case HWSS_SSCM_POLICY_NO_INTR_POLLING:
             ESP_GOTO_ON_ERROR(esp_timer_stop(sscm_pro->sock_polling_timer),err,TAG,"fail to stop sock polling timer");
         break;
+
+        case HWSS_SSCM_POLICY_INTR_ONLY: break;
 
         case HWSS_SSCM_POLICY_INTR_WAKEUP_POLLING:
             if(esp_timer_is_active(sscm_pro->sock_polling_timer))
@@ -218,7 +228,7 @@ esp_err_t hwss_sscm_set_sock_state(hwss_sscm_t *sscm, hwss_eth_sockid_t id, cons
     hwss_sscm_pro_t *sscm_pro=__containerof(sscm,hwss_sscm_pro_t,super);
     hwss_sscm_drv_t *sscm_drv=sscm_pro->drv;
 
-    if(sscm_pro->policy==HWSS_SSCM_POLICY_NO_INTR_POLLING || *state==HWSS_SOCKACT_GENERIC)
+    if(sscm_pro->policy!=HWSS_SSCM_POLICY_INTR_WAKEUP_POLLING || *state==HWSS_SOCKACT_GENERIC)
         return ESP_ERR_NOT_SUPPORTED;
 
     if(*state==sscm_pro->sockact_sta_list[id])
@@ -244,7 +254,6 @@ esp_err_t hwss_sscm_set_sock_state(hwss_sscm_t *sscm, hwss_eth_sockid_t id, cons
 
         ESP_GOTO_ON_ERROR(sscm_drv->set_sock_global_intr_enable(sscm_drv,id,true),err,TAG,"fail to enable sock%u global interrupt",id);
     }
-
     sscm_pro->sockact_sta_list[id]=*state;
 
 err:
@@ -266,28 +275,43 @@ esp_err_t hwss_sscm_intr_process(hwss_sscm_t *sscm){
 
     ESP_GOTO_ON_ERROR(sscm_drv->get_sock_global_intr_bits(sscm_drv,&gintr),err,TAG,"cannot get socket global interrupt");
 
-    for(hwss_eth_sockid_t id=0;id<sscm_pro->en_socknum;id++){
-        if(gintr&0x0001 && sscm_pro->sockact_sta_list[id]==HWSS_SOCKACT_IDLE){
-            ESP_GOTO_ON_ERROR(sscm_drv->get_sock_intr(sscm_drv,id,&sintr),err,TAG,"cannot read sock%u status",id);
+    switch (sscm_pro->policy){
+        case HWSS_SSCM_POLICY_INTR_WAKEUP_POLLING:
+            for(hwss_eth_sockid_t id=0;id<sscm_pro->en_socknum;id++){
+                if(gintr&0x0001 && sscm_pro->sockact_sta_list[id]==HWSS_SOCKACT_IDLE){
+                    ESP_GOTO_ON_ERROR(sscm_drv->get_sock_intr(sscm_drv,id,&sintr),err,TAG,"cannot read sock%u status",id);
+                    ESP_GOTO_ON_ERROR(hwss_sscm_sock_event_post(sscm_pro,id,sintr),err,TAG,"fail to post event");
+                    ESP_GOTO_ON_ERROR(sscm_drv->clear_sock_intr(sscm_drv,id),err,TAG,"fail to clear intr");
+                    ESP_GOTO_ON_ERROR(sscm_drv->set_sock_global_intr_enable(sscm_drv,id,false),err,TAG,"fail to disable sock global intr");
+                
+                    sscm_pro->sockact_sta_list[id]=HWSS_SOCKACT_ACTIVE;
+                    if(sscm_pro->active_sock_num==0)
+                        ESP_GOTO_ON_ERROR(esp_timer_start_periodic(sscm_pro->sock_polling_timer,sscm_pro->sock_polling_period_ms*1000),
+                                        err,TAG,"cannot start sock polling timer");
+                    
+                    sscm_pro->active_sock_num++;
+                    ESP_LOGD(TAG,"SOCK%u Active",id);
 
-            ESP_GOTO_ON_ERROR(hwss_sscm_sock_event_post(sscm_pro,id,sintr),err,TAG,"fail to post event");
-
-            ESP_GOTO_ON_ERROR(sscm_drv->clear_sock_intr(sscm_drv,id),err,TAG,"fail to clear intr");
-
-            ESP_GOTO_ON_ERROR(sscm_drv->set_sock_global_intr_enable(sscm_drv,id,false),err,TAG,"fail to disable sock global intr");
+                    ESP_GOTO_ON_ERROR(esp_timer_start_once(sscm_pro->socktimer_list[id],sscm_pro->sock_active_threshold_ms*1000),err,TAG,
+                                        "fail to start sock%u timer",id);
+                }
+                gintr>>=1;
+            }
+            break;
         
-            sscm_pro->sockact_sta_list[id]=HWSS_SOCKACT_ACTIVE;
-            if(sscm_pro->active_sock_num==0)
-                ESP_GOTO_ON_ERROR(esp_timer_start_periodic(sscm_pro->sock_polling_timer,sscm_pro->sock_polling_period_ms*1000),
-                                err,TAG,"cannot start sock polling timer");
-            
-            sscm_pro->active_sock_num++;
-            ESP_LOGD(TAG,"SOCK%u Active",id);
+        case HWSS_SSCM_POLICY_INTR_ONLY:
+            for(hwss_eth_sockid_t id=0;id<sscm_pro->en_socknum;id++){
+                if(gintr&0x0001){
+                    ESP_GOTO_ON_ERROR(sscm_drv->get_sock_intr(sscm_drv,id,&sintr),err,TAG,"cannot read sock%u status",id);
+                    ESP_GOTO_ON_ERROR(hwss_sscm_sock_event_post(sscm_pro,id,sintr),err,TAG,"fail to post event");
+                    ESP_GOTO_ON_ERROR(sscm_drv->clear_sock_intr(sscm_drv,id),err,TAG,"fail to clear intr");
+                }
+                gintr>>=1;
+            }
+            break;
 
-            ESP_GOTO_ON_ERROR(esp_timer_start_once(sscm_pro->socktimer_list[id],sscm_pro->sock_active_threshold_ms*1000),err,TAG,
-                                "fail to start sock%u timer",id);
-        }
-        gintr>>=1;
+        default:
+            break;
     }
 
 err:
@@ -334,13 +358,15 @@ hwss_sscm_t *hwss_sscm_new(esp_event_loop_handle_t elp_hdl,hwss_sscm_drv_t *drv,
         }
     }
 
-    esp_timer_create_args_t timer_arg={
-        .arg=sscm,
-        .name="hwss_sscm_polling_timer",
-        .callback=hwss_sscm_sock_polling_timer_cb,
-        .skip_unhandled_events=true
-    };
-    ESP_GOTO_ON_FALSE(esp_timer_create(&timer_arg,&(sscm->sock_polling_timer))==ESP_OK,NULL,err,TAG,"cannot create polling timer");
+    if(sscm->policy!=HWSS_SSCM_POLICY_INTR_ONLY){
+        esp_timer_create_args_t timer_arg={
+            .arg=sscm,
+            .name="hwss_sscm_polling_timer",
+            .callback=hwss_sscm_sock_polling_timer_cb,
+            .skip_unhandled_events=true
+        };
+        ESP_GOTO_ON_FALSE(esp_timer_create(&timer_arg,&(sscm->sock_polling_timer))==ESP_OK,NULL,err,TAG,"cannot create polling timer");
+    }
 
     return &sscm->super;
 err:

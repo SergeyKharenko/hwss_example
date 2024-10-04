@@ -37,4 +37,3 @@ static inline esp_err_t hwss_sir_stop(hwss_sir_t *sir){
 }
 
 hwss_sir_t *hwss_sir_new(hwss_eth_sku_t sku, esp_event_loop_handle_t elp_hdl, hwss_io_t *io, const hwss_sir_config_t *config);
-
