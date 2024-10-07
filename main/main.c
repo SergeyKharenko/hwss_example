@@ -1,9 +1,13 @@
 #include <stdio.h>
 #include <rom/ets_sys.h>
 #include "esp_log.h"
+
 #include "hwss_eth_event.h"
 #include "hwss_eth_config.h"
 #include "hwss_eth.h"
+
+#include "hwss_io_spi_basic.h"
+
 
 // #define TEST_USE_TCP     
 

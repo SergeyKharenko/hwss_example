@@ -1,20 +1,18 @@
 #pragma once
-#include <sys/cdefs.h>
-#include <string.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
-#include "esp_check.h"
+
+#include "driver/gpio.h"
+#include "driver/spi_master.h"
+
+#include "hwss_io.h"
 #include "hwss_cache.h"
 #include "hwss_eth_opt.h"
-#include "hwss_io.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+typedef struct{
+    spi_host_device_t   spi_host_id;
+    gpio_num_t          cs_io_num;
+    uint32_t            speed_khz;
+} hwss_io_spi_config_t;
 
-////////////////////////////////////////////////////////////////////
-////////////////////// Generic SPI Driver //////////////////////////
-////////////////////////////////////////////////////////////////////
 typedef struct{
     hwss_io_t           super;
     spi_device_handle_t hdl;
@@ -25,7 +23,6 @@ typedef struct{
 
     void                *cache;
 }hwss_io_spi_t;
-
 
 static inline bool HWSS_IO_SPI_LOCK(hwss_io_spi_t *io){
     return (xSemaphoreTake(io->lock,pdMS_TO_TICKS(HWSS_IO_LOCK_TIMEOUT_MS)) == pdTRUE);
@@ -153,90 +150,3 @@ static inline hwss_io_spi_t *hwss_io_new_spi(const hwss_io_spi_config_t* config)
     io_spi->lock=xSemaphoreCreateMutex();
     return io_spi;
 }
-
-////////////////////////////////////////////////////////////////////
-//////////////////// Generic SPI PRO Driver ////////////////////////
-////////////////////////////////////////////////////////////////////
-typedef struct{
-    hwss_io_t           super;
-    spi_device_handle_t hdl;
-    SemaphoreHandle_t   lock;
-    
-    spi_host_device_t               spi_host_id;
-    spi_device_interface_config_t   spi_config;
-
-    void                *cache;
-}hwss_io_spi_pro_t;
-
-static inline bool HWSS_IO_SPI_PRO_LOCK(hwss_io_spi_pro_t *io){
-    return (xSemaphoreTake(io->lock,pdMS_TO_TICKS(HWSS_IO_LOCK_TIMEOUT_MS)) == pdTRUE);
-}
-
-static inline bool HWSS_IO_SPI_PRO_UNLOCK(hwss_io_spi_pro_t *io){
-    return (xSemaphoreGive(io->lock) == pdTRUE);
-}
-
-static inline esp_err_t hwss_io_spi_pro_init(hwss_io_t *io){
-    hwss_io_spi_pro_t *io_spi_pro=__containerof(io,hwss_io_spi_pro_t,super);
-
-    io_spi_pro->cache=hwss_cache_dma_alloc(HWSS_IO_CACHE_SIZE);
-    return spi_bus_add_device(io_spi_pro->spi_host_id,&(io_spi_pro->spi_config),&(io_spi_pro->hdl));
-}
-
-static inline esp_err_t hwss_io_spi_pro_deinit(hwss_io_t *io){
-    hwss_io_spi_pro_t *io_spi_pro=__containerof(io,hwss_io_spi_pro_t,super);
-
-    esp_err_t ret=spi_bus_remove_device(io_spi_pro->hdl);
-    if(io_spi_pro->cache)
-        free(io_spi_pro->cache);
-    return ret;
-}
-
-
-static inline hwss_io_spi_pro_t *hwss_io_new_spi_pro(const hwss_io_spi_pro_config_t* config){
-    hwss_io_spi_pro_t *io_spi_pro=NULL;
-    io_spi_pro = (hwss_io_spi_pro_t *) calloc(1,sizeof(hwss_io_spi_pro_t));
-    if(io_spi_pro==NULL)
-        return NULL;
-
-    io_spi_pro->spi_host_id= config->spi_host_id;
-    io_spi_pro->spi_config.clock_speed_hz=config->speed_khz*1000;
-    io_spi_pro->spi_config.spics_io_num=config->cs_io_num;
-    io_spi_pro->spi_config.queue_size=4;
-
-    io_spi_pro->lock=xSemaphoreCreateMutex();
-    return io_spi_pro;
-}
-
-
-////////////////////////////////////////////////////////////////////
-//////////////////// Generic Parallel Driver ////////////////////////
-////////////////////////////////////////////////////////////////////
-typedef struct{
-    hwss_io_t           super;
-    uint8_t             io_width;
-    gpio_num_t          io_nums[16];
-
-    uint8_t             addr_io_width;
-    gpio_num_t          addr_io_nums[8];
-
-    gpio_num_t          wr_io_num;
-    gpio_num_t          rd_io_num;
-
-    dedic_gpio_bundle_handle_t data_hdl;
-    dedic_gpio_bundle_handle_t ctrl_hdl;
-    SemaphoreHandle_t   lock;
-}hwss_io_fast_parallel_t;
-
-
-static inline bool IO_FAST_PARALLEL_LOCK(hwss_io_fast_parallel_t *io){
-    return (xSemaphoreTake(io->lock,pdMS_TO_TICKS(HWSS_IO_LOCK_TIMEOUT_MS)) == pdTRUE);
-}
-
-static inline bool IO_FAST_PARALLEL_UNLOCK(hwss_io_fast_parallel_t *io){
-    return (xSemaphoreGive(io->lock) == pdTRUE);
-}
-
-#ifdef __cplusplus
-}
-#endif

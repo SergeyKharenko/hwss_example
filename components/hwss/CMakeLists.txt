@@ -18,7 +18,7 @@ set(srcs "hwss_event.c"
 
         "netif/hwss_netif.c"
 )
-set(inc_dirs "include" "eth/include" "netif/include")
+set(inc_dirs "include" "eth/include" "eth/io" "netif/include")
 
 list(APPEND srcs 
                 "eth/wiznet/w5500/hwss_cctl_w5500.c"

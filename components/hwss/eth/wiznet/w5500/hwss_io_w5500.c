@@ -5,7 +5,7 @@
 #include "esp_check.h"
 
 #include "w5500.h"
-#include "hwss_io_base.h"
+#include "hwss_io_spi_basic.h"
 #include "hwss_io_wiznet.h"
 
 

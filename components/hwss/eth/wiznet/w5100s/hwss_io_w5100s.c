@@ -5,7 +5,7 @@
 #include "esp_check.h"
 
 #include "w5100s.h"
-#include "hwss_io_base.h"
+#include "hwss_io_spi_basic.h"
 #include "hwss_io_wiznet.h"
 
 const hwss_io_types_t W5100S_IO_SUPPORT_LIST={HWSS_IO_SPI,HWSS_IO_PARALLEL_8,HWSS_IO_TYPE_END};

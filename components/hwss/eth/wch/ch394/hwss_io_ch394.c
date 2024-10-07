@@ -5,7 +5,7 @@
 #include "esp_check.h"
 
 #include "ch394.h"
-#include "hwss_io_base.h"
+#include "hwss_io_spi_basic.h"
 #include "hwss_io_wch.h"
 
 const hwss_io_types_t CH394_IO_SUPPORT_LIST={HWSS_IO_SPI,HWSS_IO_TYPE_END};

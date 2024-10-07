@@ -3,9 +3,8 @@
 #include <stdbool.h>
 
 #include "driver/dedic_gpio.h"
-#include "driver/gpio.h"
-#include "driver/spi_common.h"
-#include "driver/spi_master.h"
+
+
 #include "driver/uart.h"
 
 #include "esp_err.h"
@@ -28,32 +27,28 @@ struct hwss_io_s{
     esp_err_t (*write_mem)(hwss_io_t *io, uint32_t cmd, uint32_t addr, const uint8_t *data, size_t data_len);
 };
 
-typedef struct{
-    spi_host_device_t   spi_host_id;
-    gpio_num_t          cs_io_num;
-    uint32_t            speed_khz;
-} hwss_io_spi_config_t;
 
-typedef hwss_io_spi_config_t hwss_io_spi_pro_config_t;
 
-typedef struct{
-    uint8_t             io_width;
-    gpio_num_t          io_nums[16];
+// typedef hwss_io_spi_config_t hwss_io_spi_pro_config_t;
 
-    uint8_t             addr_io_width;
-    gpio_num_t          addr_io_nums[8];
+// typedef struct{
+//     uint8_t             io_width;
+//     gpio_num_t          io_nums[16];
 
-    gpio_num_t          wr_io_num;
-    gpio_num_t          rd_io_num;
-}hwss_io_parallel_config_t;
+//     uint8_t             addr_io_width;
+//     gpio_num_t          addr_io_nums[8];
 
-typedef struct{
-    gpio_num_t          tx_io_num;
-    gpio_num_t          rx_io_num;
+//     gpio_num_t          wr_io_num;
+//     gpio_num_t          rd_io_num;
+// }hwss_io_parallel_config_t;
 
-    uart_port_t         port;
-    uart_config_t       uart_cfg;
-}hwss_io_uart_config_t;
+// typedef struct{
+//     gpio_num_t          tx_io_num;
+//     gpio_num_t          rx_io_num;
+
+//     uart_port_t         port;
+//     uart_config_t       uart_cfg;
+// }hwss_io_uart_config_t;
 
 static inline esp_err_t hwss_io_init(hwss_io_t *io){
     return io->init(io);
