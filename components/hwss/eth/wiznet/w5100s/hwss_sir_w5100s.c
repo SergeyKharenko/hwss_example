@@ -26,8 +26,6 @@ static void hwss_sir_w5100s_check_state_timer_cb(void *args){
         return;
     }
 
-    ESP_LOGI(TAG,"IR:%X",ir);
-
     if(ir&W5100S_IR_CONFLICT){        
         if(esp_event_post_to(sir_w5100s->elp_hdl,HWSS_SIR_EVENT,HWSS_SIR_EVENT_IP_CONFLICT,NULL,0,0)!=ESP_OK){
             ESP_LOGE(TAG,"fail to post event");

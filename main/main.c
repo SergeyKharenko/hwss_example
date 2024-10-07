@@ -69,51 +69,51 @@ static uint8_t *cache;
 void app_main(void)
 {
 
-    // spi_bus_config_t bcfg={
-    //     .sclk_io_num=12,
-    //     .miso_io_num=13,
-    //     .mosi_io_num=11,
-    //     .quadhd_io_num=-1,
-    //     .quadwp_io_num=-1,
-    // };
-
-    // hwss_io_spi_config_t cfg={
-    //     .spi_host_id=SPI2_HOST,
-    //     .cs_io_num=10,
-    //     .speed_khz=40*1000
-    // };
-
     spi_bus_config_t bcfg={
-        .sclk_io_num=14,
-        .miso_io_num=12,
-        .mosi_io_num=13,
+        .sclk_io_num=12,
+        .miso_io_num=13,
+        .mosi_io_num=11,
         .quadhd_io_num=-1,
         .quadwp_io_num=-1,
     };
 
     hwss_io_spi_config_t cfg={
         .spi_host_id=SPI2_HOST,
-        .cs_io_num=15,
-        .speed_khz=20*1000
+        .cs_io_num=10,
+        .speed_khz=40*1000
     };
 
-    // const gpio_num_t GPIO_RST_PIN=9;
-    // const gpio_num_t GPIO_IR_PIN=14;
-    const gpio_num_t GPIO_RST_PIN=27;
-    const gpio_num_t GPIO_IR_PIN=26;
+    // spi_bus_config_t bcfg={
+    //     .sclk_io_num=14,
+    //     .miso_io_num=12,
+    //     .mosi_io_num=13,
+    //     .quadhd_io_num=-1,
+    //     .quadwp_io_num=-1,
+    // };
+
+    // hwss_io_spi_config_t cfg={
+    //     .spi_host_id=SPI2_HOST,
+    //     .cs_io_num=15,
+    //     .speed_khz=10*1000
+    // };
+
+    const gpio_num_t GPIO_RST_PIN=9;
+    const gpio_num_t GPIO_IR_PIN=14;
+    // const gpio_num_t GPIO_RST_PIN=27;
+    // const gpio_num_t GPIO_IR_PIN=26;
 
     cache=heap_caps_malloc(1024,MALLOC_CAP_DMA);
 
     spi_bus_initialize(SPI2_HOST,&bcfg,SPI_DMA_CH_AUTO);
 
-    // hwss_eth_config_t eth_config=HWSS_ETH_W5500_DEFAULT_CONFIG(HWSS_IO_SPI,&cfg,GPIO_IR_PIN,GPIO_RST_PIN);
-    hwss_eth_config_t eth_config=HWSS_ETH_W5100S_DEFAULT_CONFIG(HWSS_IO_SPI,&cfg,GPIO_IR_PIN,GPIO_RST_PIN);
+    hwss_eth_config_t eth_config=HWSS_ETH_W5500_DEFAULT_CONFIG(HWSS_IO_SPI,&cfg,GPIO_IR_PIN,GPIO_RST_PIN);
+    // hwss_eth_config_t eth_config=HWSS_ETH_W5100S_DEFAULT_CONFIG(HWSS_IO_SPI,&cfg,GPIO_IR_PIN,GPIO_RST_PIN);
 
-    // uint8_t size[]={4,4,4,4};
-    // hwss_eth_config_set_tx_rx_buffsize_kb(&eth_config,4,size,size);
-
-    uint8_t size[]={2,2,2,2};
+    uint8_t size[]={4,4,4,4};
     hwss_eth_config_set_tx_rx_buffsize_kb(&eth_config,4,size,size);
+
+    // uint8_t size[]={2,2,2,2};
+    // hwss_eth_config_set_tx_rx_buffsize_kb(&eth_config,4,size,size);
 
     eth=hwss_eth_new(&eth_config);
 
@@ -125,11 +125,11 @@ void app_main(void)
     hwss_eth_init(eth);
     hwss_eth_print_info(eth);
 
-    hwss_chipver_t ver;
-    while(1){
-        hwss_cvr_get_chip_version(eth->cvr,&ver);
-        ESP_LOGI(TAG,"VER:%X",ver);
-    }
+    // hwss_chipver_t ver;
+    // while(1){
+    //     hwss_cvr_get_chip_version(eth->cvr,&ver);
+    //     ESP_LOGI(TAG,"VER:%X",ver);
+    // }
 
     hwss_eth_start(eth);
 
@@ -205,6 +205,8 @@ void app_main(void)
             hwss_hso_set_sock_dest_port(eth->hso,sockid,&udp_header.port);
             hwss_eth_sock_send(eth,sockid,cache,udp_header.len);
 
+            // cache[udp_header.len]='\0';
+            // ESP_LOGI(TAG,"%s",cache);
             ESP_LOGI(TAG,"IP:%u.%u.%u.%u",udp_header.addr[0],udp_header.addr[1],udp_header.addr[2],udp_header.addr[3]);
             ESP_LOGI(TAG,"PORT:%u",udp_header.port);
             ESP_LOGI(TAG,"LEN:%u",udp_header.len);
