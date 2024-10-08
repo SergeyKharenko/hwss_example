@@ -4,6 +4,7 @@
 #include "driver/spi_master.h"
 #include "hal/spi_ll.h"
 #include "hal/spi_hal.h"
+#include "esp_rom_sys.h"
 
 #include "hwss_io.h"
 #include "hwss_cache.h"
@@ -11,9 +12,10 @@
 
 typedef enum{
     HWSS_IO_SPI_PRO_NOGAP=0x00,
-    HWSS_IO_SPI_PRO_GAP_HD=0x01,
-    HWSS_IO_SPI_PRO_GAP_DD=0x02,
-    HWSS_IO_SPI_PRO_GAP_HH=0x04,
+    HWSS_IO_SPI_PRO_GAP_DD=0x01,
+    HWSS_IO_SPI_PRO_GAP_HH=0x02,
+    HWSS_IO_SPI_PRO_GAP_HD=0x04,
+    HWSS_IO_SPI_PRO_GAP_HD_PRO=0x08,
 }hwss_io_spi_pro_gap_t;
 
 typedef struct{
@@ -36,6 +38,7 @@ typedef struct{
 
     uint8_t             head_size;
     void                *head_cache;
+    uint8_t             hd_pro_delay;
 }hwss_io_spi_pro_t;
 
 static inline bool HWSS_IO_SPI_PRO_LOCK(hwss_io_spi_pro_t *io){
@@ -99,13 +102,23 @@ static inline esp_err_t hwss_io_spi_pro_cache_write(hwss_io_t *io, uint16_t cmd,
         ESP_LOGV(SPI_TAG, "polling trans");
         dev->host->cur_cs = dev->id;
 
-        
-        if(gap&HWSS_IO_SPI_PRO_GAP_DD){
-
+        if(gap&HWSS_IO_SPI_PRO_GAP_HH){
+            
         }
         else{
 
+        }
 
+        if(gap&HWSS_IO_SPI_PRO_GAP_HD_PRO)
+            esp_rom_delay_us(io_spi_pro->hd_pro_delay);
+
+        
+        if(gap&HWSS_IO_SPI_PRO_GAP_DD){
+            
+
+        }
+        else{
+            
             
         }
 
