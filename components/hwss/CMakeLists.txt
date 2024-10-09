@@ -1,4 +1,5 @@
 set(srcs "hwss_event.c"
+        "eth/io/hwss_io_spi_pro.c"
         "eth/hwss_cctl.c"
         "eth/hwss_cvr.c"
         "eth/hwss_eth_event.c"
@@ -44,11 +45,14 @@ list(APPEND srcs
                 "eth/wiznet/w5100s/hwss_hso_w5100s.c"
                 "eth/wiznet/w5100s/hwss_sscm_drv_w5100s.c"
 
+                "eth/wiznet/w6100/hwss_io_w6100.c"
+
                 "eth/wch/ch394/hwss_io_ch394.c"
                 )
 list(APPEND inc_dirs    "eth/wiznet" 
                         "eth/wiznet/w5500" 
                         "eth/wiznet/w5100s"
+                        "eth/wiznet/w6100"
 
                         "eth/wch"
                         "eth/wch/ch394"

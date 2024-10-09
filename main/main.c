@@ -137,10 +137,10 @@ void app_main(void)
 
     hwss_eth_start(eth);
 
-    // hwss_eth_ip4_addr_t ip={10,0,0,5};
-    // hwss_eth_ip4_addr_t gip={10,0,0,1};
-    hwss_eth_ip4_addr_t ip={192,168,0,10};
-    hwss_eth_ip4_addr_t gip={192,168,0,1};
+    hwss_eth_ip4_addr_t ip={10,0,0,5};
+    hwss_eth_ip4_addr_t gip={10,0,0,1};
+    // hwss_eth_ip4_addr_t ip={192,168,0,10};
+    // hwss_eth_ip4_addr_t gip={192,168,0,1};
     hwss_eth_ip4_addr_t mask={255,255,255,0};
 
     eth->hnet->set_source_addr(eth->hnet,ip);
