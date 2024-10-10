@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "sdkconfig.h"
 #include <rom/ets_sys.h>
 #include "esp_log.h"
 
@@ -6,10 +7,75 @@
 #include "hwss_eth_config.h"
 #include "hwss_eth.h"
 
+#include "drv_w6100.h"
 #include "hwss_io_spi_basic.h"
+
+#ifdef CONFIG_IDF_TARGET_ESP32S3
+spi_bus_config_t bcfg={
+    .sclk_io_num=12,
+    .miso_io_num=13,
+    .mosi_io_num=11,
+    .quadhd_io_num=-1,
+    .quadwp_io_num=-1,
+};
+
+hwss_io_spi_config_t cfg={
+    .spi_host_id=SPI2_HOST,
+    .cs_io_num=10,
+    .speed_khz=40*1000
+};
+
+const gpio_num_t GPIO_RST_PIN=9;
+const gpio_num_t GPIO_IR_PIN=14;
+#endif
+
+#ifdef CONFIG_IDF_TARGET_ESP32
+spi_bus_config_t bcfg={
+    .sclk_io_num=14,
+    .miso_io_num=12,
+    .mosi_io_num=13,
+    .quadhd_io_num=-1,
+    .quadwp_io_num=-1,
+};
+
+hwss_io_spi_config_t cfg={
+    .spi_host_id=SPI2_HOST,
+    .cs_io_num=15,
+    .speed_khz=10*1000
+};
+
+const gpio_num_t GPIO_RST_PIN=27;
+const gpio_num_t GPIO_IR_PIN=26;
+#endif
+
+#ifdef CONFIG_IDF_TARGET_ESP32C3
+spi_bus_config_t bcfg={
+    .sclk_io_num=6,
+    .miso_io_num=2,
+    .mosi_io_num=7,
+    .quadhd_io_num=-1,
+    .quadwp_io_num=-1,
+};
+
+hwss_io_spi_config_t cfg={
+    .spi_host_id=SPI2_HOST,
+    .cs_io_num=10,
+    .speed_khz=40*1000
+};
+
+const gpio_num_t GPIO_RST_PIN=4;
+const gpio_num_t GPIO_IR_PIN=5;
+#endif
+
+
+
+
 
 
 // #define TEST_USE_TCP     
+// #define TEST_W5500
+// #define TEST_W5100
+#define TEST_W6100
 
 static const char *TAG="main";
 
@@ -72,54 +138,50 @@ static uint8_t *cache;
 
 void app_main(void)
 {
-
-    spi_bus_config_t bcfg={
-        .sclk_io_num=12,
-        .miso_io_num=13,
-        .mosi_io_num=11,
-        .quadhd_io_num=-1,
-        .quadwp_io_num=-1,
-    };
-
-    hwss_io_spi_config_t cfg={
-        .spi_host_id=SPI2_HOST,
-        .cs_io_num=10,
-        .speed_khz=40*1000
-    };
-
-    // spi_bus_config_t bcfg={
-    //     .sclk_io_num=14,
-    //     .miso_io_num=12,
-    //     .mosi_io_num=13,
-    //     .quadhd_io_num=-1,
-    //     .quadwp_io_num=-1,
-    // };
-
-    // hwss_io_spi_config_t cfg={
-    //     .spi_host_id=SPI2_HOST,
-    //     .cs_io_num=15,
-    //     .speed_khz=10*1000
-    // };
-
-    const gpio_num_t GPIO_RST_PIN=9;
-    const gpio_num_t GPIO_IR_PIN=14;
-    // const gpio_num_t GPIO_RST_PIN=27;
-    // const gpio_num_t GPIO_IR_PIN=26;
-
     cache=heap_caps_malloc(1024,MALLOC_CAP_DMA);
 
     spi_bus_initialize(SPI2_HOST,&bcfg,SPI_DMA_CH_AUTO);
 
+#ifdef TEST_W5500
     hwss_eth_config_t eth_config=HWSS_ETH_W5500_DEFAULT_CONFIG(HWSS_IO_SPI,&cfg,GPIO_IR_PIN,GPIO_RST_PIN);
-    // hwss_eth_config_t eth_config=HWSS_ETH_W5100S_DEFAULT_CONFIG(HWSS_IO_SPI,&cfg,GPIO_IR_PIN,GPIO_RST_PIN);
 
     uint8_t size[]={4,4,4,4};
     hwss_eth_config_set_tx_rx_buffsize_kb(&eth_config,4,size,size);
-
-    // uint8_t size[]={2,2,2,2};
-    // hwss_eth_config_set_tx_rx_buffsize_kb(&eth_config,4,size,size);
-
     eth=hwss_eth_new(&eth_config);
+#endif
+
+#ifdef TEST_W5100
+    hwss_eth_config_t eth_config=HWSS_ETH_W5100S_DEFAULT_CONFIG(HWSS_IO_SPI,&cfg,GPIO_IR_PIN,GPIO_RST_PIN);
+
+    uint8_t size[]={2,2,2,2};
+    hwss_eth_config_set_tx_rx_buffsize_kb(&eth_config,4,size,size);
+    eth=hwss_eth_new(&eth_config);
+#endif
+
+#ifdef TEST_W6100
+    gpio_config_t gpio_cfg={
+        .pin_bit_mask=1ull<<GPIO_RST_PIN,
+        .mode=GPIO_MODE_OUTPUT,
+    };
+    gpio_config(&gpio_cfg);
+    gpio_set_level(GPIO_RST_PIN,0);
+    gpio_set_level(GPIO_RST_PIN,1);
+    vTaskDelay(pdMS_TO_TICKS(500));
+
+    hwss_io_t *io=hwss_io_new(HWSS_ETH_SKU_W6100,HWSS_IO_SPI,&cfg);
+    hwss_io_init(io);
+
+    uint16_t verr;
+    uint16_t cidr;
+
+    while(1){
+        W6100_getVER(io,&verr);
+        W6100_getCIDR(io,&cidr);
+        ESP_LOGI(TAG,"VER:%X \t CIDR:%X",verr,cidr);
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+
+#endif
 
     // esp_event_handler_register_with(eth->elp_hdl,HWSS_EVENT_ANY_BASE,HWSS_EVENT_ANY_ID,hwss_event_handler,NULL);
 
@@ -129,18 +191,10 @@ void app_main(void)
     hwss_eth_init(eth);
     hwss_eth_print_info(eth);
 
-    // hwss_chipver_t ver;
-    // while(1){
-    //     hwss_cvr_get_chip_version(eth->cvr,&ver);
-    //     ESP_LOGI(TAG,"VER:%X",ver);
-    // }
-
     hwss_eth_start(eth);
 
-    hwss_eth_ip4_addr_t ip={10,0,0,5};
-    hwss_eth_ip4_addr_t gip={10,0,0,1};
-    // hwss_eth_ip4_addr_t ip={192,168,0,10};
-    // hwss_eth_ip4_addr_t gip={192,168,0,1};
+    hwss_eth_ip4_addr_t ip={192,168,0,10};
+    hwss_eth_ip4_addr_t gip={192,168,0,1};
     hwss_eth_ip4_addr_t mask={255,255,255,0};
 
     eth->hnet->set_source_addr(eth->hnet,ip);

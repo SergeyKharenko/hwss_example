@@ -1,5 +1,5 @@
 set(srcs "hwss_event.c"
-        "eth/io/hwss_io_spi_pro.c"
+        # "eth/io/hwss_io_spi_pro.c"
         "eth/hwss_cctl.c"
         "eth/hwss_cvr.c"
         "eth/hwss_eth_event.c"

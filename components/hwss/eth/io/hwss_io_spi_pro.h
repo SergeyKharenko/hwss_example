@@ -46,9 +46,6 @@ typedef struct{
 
 void hwss_io_spi_pro_inter_init(hwss_io_spi_pro_t *io_spi_pro);
 
-esp_err_t hwss_io_spi_pro_write_head(hwss_io_spi_pro_t *io_spi_pro, uint16_t cmd, uint64_t addr, hwss_io_spi_pro_gap_t gap);
-esp_err_t hwss_io_spi_pro_cache_write_data(hwss_io_spi_pro_t *io_spi_pro, const uint8_t *data, size_t len, hwss_io_spi_pro_gap_t gap);
-esp_err_t hwss_io_spi_pro_cache_read_data(hwss_io_spi_pro_t *io_spi_pro, uint8_t *data, size_t len, hwss_io_spi_pro_gap_t gap);
 
 static inline bool HWSS_IO_SPI_PRO_LOCK(hwss_io_spi_pro_t *io){
     return (xSemaphoreTake(io->lock,pdMS_TO_TICKS(HWSS_IO_LOCK_TIMEOUT_MS)) == pdTRUE);
