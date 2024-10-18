@@ -7,7 +7,7 @@
 #include "hwss_eth_config.h"
 #include "hwss_eth.h"
 
-#include "drv_w6100.h"
+#include "drv_ch394.h"
 #include "hwss_io_spi_basic.h"
 
 #ifdef CONFIG_IDF_TARGET_ESP32S3
@@ -60,7 +60,7 @@ spi_bus_config_t bcfg={
 hwss_io_spi_config_t cfg={
     .spi_host_id=SPI2_HOST,
     .cs_io_num=10,
-    .speed_khz=40*1000
+    .speed_khz=2000
 };
 
 const gpio_num_t GPIO_RST_PIN=4;
@@ -75,7 +75,8 @@ const gpio_num_t GPIO_IR_PIN=5;
 // #define TEST_USE_TCP     
 // #define TEST_W5500
 // #define TEST_W5100
-#define TEST_W6100
+// #define TEST_W6100
+#define TEST_CH394
 
 static const char *TAG="main";
 
@@ -183,6 +184,32 @@ void app_main(void)
 
 #endif
 
+#ifdef TEST_CH394
+    gpio_config_t gpio_cfg={
+        .pin_bit_mask=1ull<<GPIO_RST_PIN,
+        .mode=GPIO_MODE_OUTPUT,
+    };
+    gpio_config(&gpio_cfg);
+    gpio_set_level(GPIO_RST_PIN,0);
+    gpio_set_level(GPIO_RST_PIN,1);
+    vTaskDelay(pdMS_TO_TICKS(500));
+
+    hwss_io_t *io=hwss_io_new(HWSS_ETH_SKU_CH394,HWSS_IO_SPI,&cfg);
+    hwss_io_init(io);
+
+    uint8_t verr;
+    uint8_t phyr;
+    hwss_eth_mac_addr_t mac_addr;
+    while(1){
+        CH394_GetCHIPV(io,&verr);
+        CH394_GetPHY_CFG(io,&phyr);
+        CH394_GetMAC(io,mac_addr);
+        ESP_LOGI(TAG,"VER:%X \t PHY:%X \t MAC:%X:%X:%X:%X:%X:%X",verr,phyr,mac_addr[0],mac_addr[1],mac_addr[2],
+                    mac_addr[3],mac_addr[4],mac_addr[5]);
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+
+#endif
     // esp_event_handler_register_with(eth->elp_hdl,HWSS_EVENT_ANY_BASE,HWSS_EVENT_ANY_ID,hwss_event_handler,NULL);
 
     gpio_install_isr_service(0);

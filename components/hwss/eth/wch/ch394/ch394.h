@@ -125,6 +125,13 @@
 #define CH394_GINT_UNREACH              0x40 /* Destination port unreachable */
 #define CH394_GINT_MP                   0x10 /* Magic packet interrupt */
 
+/* PHY_CFG phy config register */
+#define CH394_PHY_CFG_RST               0x80 /* PHY Reset */
+#define CH394_PHY_CFG_OPMD              0x40 /* PHY Mode Configured by MOD Pin */
+#define CH394_PHY_CFG_DPX_FULL          0x04 /* 1: Duplex Full  0: Duplex Half */
+#define CH394_PHY_CFG_SPD_100M          0x02 /* 1: Speed 100M  0: Speed 10M */
+#define CH394_PHY_CFG_LNK_ON            0x01 /* 1: Link ON  0: Link OFF */   
+
 /* Socket n mode register */
 #define CH394_Sn_MODE_CLOSE             0x00 /* Unused socket */
 #define CH394_Sn_MODE_TCP               0x01 /* TCP mode */

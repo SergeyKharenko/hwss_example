@@ -163,7 +163,7 @@ static inline esp_err_t CH394_SetSn_DPORT(hwss_io_t *io, uint8_t sn, const uint1
     return io->write_buf(io,0,CH394_REG_Sn_DPORT0(sn),(uint8_t *)&nv,2);
 }
 
-static inline esp_err_t CH394Q_SetSn_MTU(hwss_io_t *io, uint8_t sn, const uint16_t *mtu){
+static inline esp_err_t CH394_SetSn_MTU(hwss_io_t *io, uint8_t sn, const uint16_t *mtu){
     uint16_t nv=hwss_eth_htons(*mtu);
     return io->write_buf(io,0,CH394_REG_Sn_MTU0(sn),(uint8_t *)&nv,2);
 }
